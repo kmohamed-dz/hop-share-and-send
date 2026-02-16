@@ -12,7 +12,7 @@ export default function ProfileSetup() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const role = (location.state as any)?.role || "both";
+  const role = (location.state as { role?: string } | null)?.role || "both";
 
   useEffect(() => {
     // Check if user is authenticated

@@ -1,26 +1,50 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, Info, Smartphone } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeAlgerianPhone } from "@/lib/phone";
 import { toast } from "sonner";
-import { ArrowLeft, Smartphone, Info } from "lucide-react";
 
-/**
- * Format phone display: 0X XX XX XX XX
- */
+type LoginLocationState = {
+  role?: string;
+};
+
+const ALGERIA_HELPER_TEXT = "Entrez 5XXXXXXXX (sans le 0)";
+
 function formatPhoneDisplay(value: string): string {
   const digits = value.replace(/\D/g, "");
   if (digits.length === 0) return "";
-  // Format as: 0X XX XX XX XX
+
   let formatted = "";
-  for (let i = 0; i < digits.length && i < 10; i++) {
+  for (let i = 0; i < digits.length && i < 9; i += 1) {
     if (i === 2 || i === 4 || i === 6 || i === 8) formatted += " ";
     formatted += digits[i];
   }
+
   return formatted;
+}
+
+function isMissingSmsProviderError(message: string): boolean {
+  const normalizedMessage = message.toLowerCase();
+  return normalizedMessage.includes("unsupported phone provider") || normalizedMessage.includes("phone provider");
+}
+
+function buildOtpErrorMessage(message: string): { title: string; description?: string } {
+  if (isMissingSmsProviderError(message)) {
+    return {
+      title: "Configuration requise: service SMS indisponible",
+      description:
+        "Activez Supabase Auth > Phone, puis configurez Twilio ou MessageBird dans les paramètres SMS.",
+    };
+  }
+
+  return {
+    title: "Erreur d'envoi du code",
+    description: message,
+  };
 }
 
 export default function Login() {
@@ -28,32 +52,33 @@ export default function Login() {
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
   const location = useLocation();
-  const role = (location.state as any)?.role;
+  const role = (location.state as LoginLocationState | null)?.role;
 
   const rawDigits = phone.replace(/\D/g, "");
-  const isPhoneValid = rawDigits.length >= 9 && rawDigits.length <= 10;
+  const isPhoneValid = /^[567]\d{8}$/.test(rawDigits);
 
   const handlePhoneChange = (value: string) => {
-    // Only keep digits
-    const digits = value.replace(/\D/g, "");
-    // Limit to 10 digits (0XXXXXXXXX)
-    setPhone(digits.slice(0, 10));
+    const digitsOnly = value.replace(/\s+/g, "").replace(/\D/g, "");
+    const withoutTrunkPrefix = digitsOnly.startsWith("0") ? digitsOnly.slice(1) : digitsOnly;
+    setPhone(withoutTrunkPrefix.slice(0, 9));
   };
 
   const handleSendOTP = async () => {
     if (!isPhoneValid) {
-      toast.error("Veuillez entrer un numero valide (ex: 0673 50 75 19)");
+      toast.error("Numero invalide", { description: ALGERIA_HELPER_TEXT });
       return;
     }
 
     setLoading(true);
     const fullPhone = normalizeAlgerianPhone(phone);
 
-    // Validate final format
     if (!/^\+213[567]\d{8}$/.test(fullPhone)) {
-      toast.error("Format invalide. Utilisez un numero mobile algerien (05/06/07).");
+      toast.error("Format invalide", {
+        description: "Utilisez un numero mobile algerien au format +2135XXXXXXXX.",
+      });
       setLoading(false);
       return;
     }
@@ -62,21 +87,18 @@ export default function Login() {
       const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
 
       if (error) {
-        if (error.message.includes("Unsupported phone provider") || error.message.includes("phone provider")) {
-          toast.error(
-            "Le service SMS n'est pas encore configure. Veuillez contacter l'administrateur pour activer l'envoi de SMS (Twilio/MessageBird) dans les parametres Supabase.",
-            { duration: 8000 }
-          );
-        } else {
-          toast.error("Erreur d'envoi du code: " + error.message);
-        }
+        const otpError = buildOtpErrorMessage(error.message);
+        toast.error(otpError.title, { description: otpError.description, duration: 9000 });
       } else {
         toast.success("Code envoye !");
         setStep("otp");
       }
-    } catch (err) {
-      toast.error("Erreur de connexion. Verifiez votre connexion internet.");
+    } catch {
+      toast.error("Erreur de connexion", {
+        description: "Verifiez votre connexion internet et reessayez.",
+      });
     }
+
     setLoading(false);
   };
 
@@ -94,20 +116,22 @@ export default function Login() {
       });
 
       if (error) {
-        toast.error("Code invalide: " + error.message);
+        toast.error("Code invalide", { description: error.message });
       } else {
         toast.success("Connexion reussie !");
         navigate("/profile/setup", { state: { role } });
       }
-    } catch (err) {
-      toast.error("Erreur de connexion. Verifiez votre connexion internet.");
+    } catch {
+      toast.error("Erreur de connexion", {
+        description: "Verifiez votre connexion internet et reessayez.",
+      });
     }
+
     setLoading(false);
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-[#f7f7f5] safe-top safe-bottom">
-      {/* Header */}
       <div className="px-6 pt-4">
         <button
           onClick={() => (step === "otp" ? setStep("phone") : navigate(-1))}
@@ -119,7 +143,6 @@ export default function Login() {
       </div>
 
       <div className="px-6 pt-6 pb-8">
-        {/* Phone icon */}
         <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center mb-6">
           <Smartphone className="h-8 w-8 text-emerald-500" />
         </div>
@@ -136,19 +159,19 @@ export default function Login() {
 
       <div className="flex-1 px-6">
         {step === "phone" ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <label className="text-sm font-semibold text-foreground">Numero de telephone</label>
             <div className="flex items-center rounded-xl border border-border bg-card overflow-hidden">
-              {/* Country code prefix */}
               <div className="flex items-center gap-2 px-4 py-3 border-r border-border bg-muted/30 shrink-0">
-                <span className="text-lg" role="img" aria-label="Algerie">🇩🇿</span>
+                <span className="text-lg" role="img" aria-label="Algerie">
+                  🇩🇿
+                </span>
                 <span className="text-sm font-semibold text-foreground">+213</span>
               </div>
-              {/* Phone input */}
               <input
                 type="tel"
                 inputMode="numeric"
-                placeholder="0X XX XX XX XX"
+                placeholder="5X XX XX XX XX"
                 value={formatPhoneDisplay(phone)}
                 onChange={(e) => handlePhoneChange(e.target.value)}
                 className="flex-1 px-4 py-3 text-base bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
@@ -158,6 +181,8 @@ export default function Login() {
                 <Smartphone className="h-5 w-5 text-emerald-500" />
               </div>
             </div>
+
+            <p className="text-xs text-muted-foreground">{ALGERIA_HELPER_TEXT}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -166,11 +191,7 @@ export default function Login() {
               <InputOTP maxLength={6} value={otp} onChange={setOtp}>
                 <InputOTPGroup>
                   {[0, 1, 2, 3, 4, 5].map((i) => (
-                    <InputOTPSlot
-                      key={i}
-                      index={i}
-                      className="h-12 w-12 text-lg rounded-lg border-border"
-                    />
+                    <InputOTPSlot key={i} index={i} className="h-12 w-12 text-lg rounded-lg border-border" />
                   ))}
                 </InputOTPGroup>
               </InputOTP>
@@ -202,7 +223,8 @@ export default function Login() {
           <div className="flex items-start gap-2 pt-2">
             <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Des frais de SMS standards peuvent s'appliquer. En continuant, vous acceptez de recevoir un code de verification a usage unique.
+              Des frais de SMS standards peuvent s'appliquer. En continuant, vous acceptez de recevoir un code de
+              verification a usage unique.
             </p>
           </div>
         )}

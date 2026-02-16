@@ -76,10 +76,17 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/c
 
 If you see `Le service SMS n'est pas encore configuré…`, Supabase Auth is not configured for phone OTP yet.
 
-1. In the Supabase dashboard, go to **Authentication → Providers → Phone** and enable **Phone sign-in**.
-2. In **Authentication → Settings → SMS provider**, configure one provider:
-   - **Twilio**: Account SID, Auth Token, Messaging Service SID (or From number).
-   - **MessageBird**: Access Key and Originator.
-3. Save the provider settings and test sending an OTP from the app.
+1. In Supabase Dashboard: **Authentication → Providers → Phone**
+   - Enable **Phone sign-in**.
+   - Configure one SMS provider:
+     - **Twilio**: Account SID, Auth Token, Messaging Service SID (or From number).
+     - **MessageBird**: Access Key and Originator.
+   - Save.
+2. In **Authentication → URL Configuration**:
+   - Set **Site URL** to your production app URL.
+   - Add all required **Redirect URLs** (preview + production), including your Vercel and Lovable/v0 domains.
+3. Real end-to-end verification:
+   - Test with `+213552623560`.
+   - Confirm SMS is actually received, then verify OTP in the app.
 
-> Note: phone OTP delivery requires a configured SMS provider in Supabase (there is no fallback without one).
+> Note: phone OTP delivery is controlled by Supabase Auth provider configuration. App code cannot send SMS if Twilio/MessageBird is not configured.

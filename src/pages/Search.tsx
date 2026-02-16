@@ -33,13 +33,6 @@ export default function SearchPage() {
 
     const fetchData = async () => {
       if (tab === "trips") {
-        let queryBuilder = supabase
-          .from("trips")
-          .select("*")
-          .eq("status", "active")
-          .order("departure_date", { ascending: true })
-          .limit(20);
-
         if (matchingWilayas.length > 0) {
           // Search by origin or destination wilaya
           const { data } = await supabase
