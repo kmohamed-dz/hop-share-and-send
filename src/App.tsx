@@ -18,6 +18,7 @@ import BrowseTrips from "@/pages/browse/BrowseTrips";
 import BrowseParcels from "@/pages/browse/BrowseParcels";
 import TripMatches from "@/pages/matches/TripMatches";
 import ParcelMatches from "@/pages/matches/ParcelMatches";
+import SearchPage from "@/pages/Search";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,9 @@ const App = () => (
           {/* Auth */}
           <Route path="/auth/login" element={<Login />} />
           <Route path="/profile/setup" element={<ProfileSetup />} />
+
+          {/* Search */}
+          <Route path="/search" element={<SearchPage />} />
 
           {/* Creation forms */}
           <Route path="/trips/create" element={<CreateTrip />} />
@@ -57,6 +61,7 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
           </Route>
 
+          {/* Fallback: redirect unknown routes to home */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
