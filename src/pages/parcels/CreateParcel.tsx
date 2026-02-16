@@ -79,15 +79,15 @@ export default function CreateParcel() {
   };
 
   return (
-    <div className="px-4 safe-top pb-8">
-      <div className="pt-6 pb-4 flex items-center gap-3">
+    <div className="mobile-page pb-8">
+      <div className="mobile-header">
         <button onClick={() => navigate(-1)} className="p-1">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-xl font-bold">Envoyer un colis</h1>
+        <h1 className="maak-section-title">Envoyer un colis</h1>
       </div>
 
-      <div className="space-y-5">
+      <div className="space-y-5 rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
         <div className="space-y-2">
           <Label>Wilaya d'origine *</Label>
           <WilayaSelect value={origin} onValueChange={setOrigin} placeholder="D'où part le colis ?" />
@@ -171,7 +171,7 @@ export default function CreateParcel() {
           </div>
         </label>
 
-        <Button onClick={handleSubmit} disabled={loading} className="w-full bg-secondary hover:bg-secondary/90" size="lg">
+        <Button onClick={handleSubmit} disabled={loading} className="w-full maak-primary-btn" size="lg">
           <Package className="h-4 w-4 mr-2" />
           {loading ? "Publication..." : "Publier la demande"}
         </Button>

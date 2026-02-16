@@ -35,14 +35,14 @@ export default function ParcelMatches() {
   }, [parcelId]);
 
   return (
-    <div className="px-4 safe-top pb-24">
-      <div className="pt-6 pb-4 flex items-center gap-3">
+    <div className="mobile-page">
+      <div className="mobile-header">
         <button onClick={() => navigate(-1)} className="p-1"><ArrowLeft className="h-5 w-5" /></button>
-        <h1 className="text-xl font-bold">Trajets compatibles</h1>
+        <h1 className="maak-section-title">Trajets compatibles</h1>
       </div>
 
       {parcel && (
-        <Card className="p-3 mb-4 bg-secondary/5 border-secondary/20">
+        <Card className="maak-card-soft p-3 mb-4">
           <p className="text-sm font-medium">Votre colis : {parcel.origin_wilaya} → {parcel.destination_wilaya}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {new Date(parcel.date_window_start).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} - {new Date(parcel.date_window_end).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
@@ -57,7 +57,7 @@ export default function ParcelMatches() {
       ) : (
         <div className="space-y-3">
           {matches.map((m) => (
-            <Card key={m.id} className="p-3.5">
+            <Card key={m.id} className="maak-card p-3.5">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Route className="h-4 w-4 text-primary" />

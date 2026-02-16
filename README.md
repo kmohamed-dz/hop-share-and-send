@@ -36,41 +36,85 @@ npm i
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Mobile app (Capacitor)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+This project is configured for Capacitor with:
 
-**Use GitHub Codespaces**
+- `appId`: `com.maak.app`
+- `appName`: `MAAK`
+- `webDir`: `dist`
+- config file: `capacitor.config.ts`
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 1) Install Capacitor dependencies
 
-## What technologies are used for this project?
+```sh
+npm i @capacitor/core @capacitor/cli
+```
 
-This project is built with:
+If your environment blocks npm registry access, install with your allowed package manager and then run the same Cap commands.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### 2) Initialize and build web assets
 
-## How can I deploy this project?
+```sh
+npx cap init MAAK com.maak.app
+npm run build
+```
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+> Vite build output is `dist/`, which matches Capacitor `webDir`.
 
-## Can I connect a custom domain to my Lovable project?
+### 3) Add mobile platforms and sync
 
-Yes, you can!
+```sh
+npx cap add android
+npx cap add ios
+npx cap sync
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### 4) Mobile icon & splash placeholders
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Placeholder files are available in `resources/`:
+
+- `resources/icon-placeholder.svg`
+- `resources/splash-placeholder.svg`
+
+After replacing them with your final branding assets, generate native resources:
+
+```sh
+npx @capacitor/assets generate
+```
+
+### 5) Build Android (APK/AAB)
+
+```sh
+npm run build
+npx cap sync android
+npx cap open android
+```
+
+Then in Android Studio:
+
+1. Select **Build > Generate Signed Bundle / APK**.
+2. Choose **Android App Bundle (AAB)** for Play Store or **APK** for direct install.
+3. Configure keystore and build variant (`release`).
+
+### 6) Build iOS
+
+```sh
+npm run build
+npx cap sync ios
+npx cap open ios
+```
+
+Then in Xcode:
+
+1. Select your target + signing team.
+2. Choose a device/simulator.
+3. Use **Product > Archive** for TestFlight/App Store.
+
+## SPA routing notes (web + mobile)
+
+- App router uses `HashRouter` to avoid refresh 404s in static/mobile webviews.
+- `vercel.json` includes an SPA rewrite fallback to `index.html`.
 
 ## Supabase OTP SMS setup (required)
 

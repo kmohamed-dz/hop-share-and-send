@@ -44,7 +44,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="px-4 safe-top">
+    <div className="mobile-page">
       {/* Header */}
       <div className="pt-6 pb-4 flex items-center justify-between">
         <h1 className="text-2xl font-extrabold text-primary">MAAK</h1>
@@ -251,7 +251,7 @@ export default function Home() {
               return (
                 <Card
                   key={parcel.id}
-                  className="p-3.5 cursor-pointer hover:shadow-md transition-shadow border border-border"
+                  className="maak-card p-3.5 cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => navigate(`/parcels/${parcel.id}/matches`)}
                 >
                   <div className="flex items-center justify-between mb-1">

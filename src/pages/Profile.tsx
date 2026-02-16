@@ -43,9 +43,9 @@ export default function Profile() {
 
   if (!user) {
     return (
-      <div className="px-4 safe-top">
-        <div className="pt-6 pb-4">
-          <h1 className="text-xl font-bold">Profil</h1>
+      <div className="mobile-page">
+        <div className="pb-4">
+          <h1 className="maak-section-title">Profil</h1>
         </div>
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -61,9 +61,9 @@ export default function Profile() {
   }
 
   return (
-    <div className="px-4 safe-top">
-      <div className="pt-6 pb-4">
-        <h1 className="text-xl font-bold">Profil</h1>
+    <div className="mobile-page">
+      <div className="pb-4">
+        <h1 className="maak-section-title">Profil</h1>
       </div>
 
       <div className="flex items-center gap-4 mb-6">
