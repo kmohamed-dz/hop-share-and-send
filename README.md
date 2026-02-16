@@ -71,3 +71,15 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Supabase OTP SMS setup (required)
+
+If you see `Le service SMS n'est pas encore configuré…`, Supabase Auth is not configured for phone OTP yet.
+
+1. In the Supabase dashboard, go to **Authentication → Providers → Phone** and enable **Phone sign-in**.
+2. In **Authentication → Settings → SMS provider**, configure one provider:
+   - **Twilio**: Account SID, Auth Token, Messaging Service SID (or From number).
+   - **MessageBird**: Access Key and Originator.
+3. Save the provider settings and test sending an OTP from the app.
+
+> Note: phone OTP delivery requires a configured SMS provider in Supabase (there is no fallback without one).

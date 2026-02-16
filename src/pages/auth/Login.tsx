@@ -4,38 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeAlgerianPhone } from "@/lib/phone";
 import { toast } from "sonner";
 import { ArrowLeft, Smartphone, Info } from "lucide-react";
-
-/**
- * Normalizes an Algerian phone number to E.164 format.
- * Handles: 0XXXXXXXXX, 0X XX XX XX XX, +213XXXXXXXXX, 213XXXXXXXXX
- * Returns: +213XXXXXXXXX (without leading 0 after country code)
- */
-function normalizeAlgerianPhone(input: string): string {
-  // Strip all non-digit characters except leading +
-  const hasPlus = input.startsWith("+");
-  const digits = input.replace(/\D/g, "");
-
-  // If already starts with 213 (with or without +)
-  if (digits.startsWith("213") && digits.length >= 12) {
-    return `+${digits}`;
-  }
-
-  // If starts with 0 (local format), remove leading 0 and prepend +213
-  if (digits.startsWith("0") && digits.length >= 9) {
-    return `+213${digits.slice(1)}`;
-  }
-
-  // If just the subscriber number (9 digits, starts with 5/6/7)
-  if (digits.length === 9 && /^[567]/.test(digits)) {
-    return `+213${digits}`;
-  }
-
-  // Fallback: prepend +213 and remove leading 0 if present
-  const cleaned = digits.startsWith("0") ? digits.slice(1) : digits;
-  return `+213${cleaned}`;
-}
 
 /**
  * Format phone display: 0X XX XX XX XX
