@@ -12,6 +12,12 @@ import Home from "@/pages/Home";
 import Activity from "@/pages/Activity";
 import Messages from "@/pages/Messages";
 import Profile from "@/pages/Profile";
+import CreateTrip from "@/pages/trips/CreateTrip";
+import CreateParcel from "@/pages/parcels/CreateParcel";
+import BrowseTrips from "@/pages/browse/BrowseTrips";
+import BrowseParcels from "@/pages/browse/BrowseParcels";
+import TripMatches from "@/pages/matches/TripMatches";
+import ParcelMatches from "@/pages/matches/ParcelMatches";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +36,18 @@ const App = () => (
           {/* Auth */}
           <Route path="/auth/login" element={<Login />} />
           <Route path="/profile/setup" element={<ProfileSetup />} />
+
+          {/* Creation forms */}
+          <Route path="/trips/create" element={<CreateTrip />} />
+          <Route path="/parcels/create" element={<CreateParcel />} />
+
+          {/* Browse */}
+          <Route path="/browse/trips" element={<BrowseTrips />} />
+          <Route path="/browse/parcels" element={<BrowseParcels />} />
+
+          {/* Matching */}
+          <Route path="/trips/:tripId/matches" element={<TripMatches />} />
+          <Route path="/parcels/:parcelId/matches" element={<ParcelMatches />} />
 
           {/* Main App */}
           <Route element={<AppLayout />}>
