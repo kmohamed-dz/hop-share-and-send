@@ -179,8 +179,7 @@ This project is deployed with GitHub Actions from `dist/` (not from repository r
 
 Why Vite base is configured this way:
 
-- on GitHub Pages, the app is served under `/hop-share-and-send/`, so Vite uses `base: "/hop-share-and-send/"` during Actions builds.
-- in local/Capacitor contexts, Vite falls back to `base: "./"`.
+- on GitHub Pages, the app is served under `/hop-share-and-send/`, so Vite is configured with `base: "/hop-share-and-send/"`.
 
 This prevents `404` on `/assets/*` and avoids blank screens caused by wrong asset paths.
 

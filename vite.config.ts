@@ -3,11 +3,9 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-const isGitHubPages = process.env.GITHUB_ACTIONS === "true" || process.env.DEPLOY_TARGET === "github-pages";
-
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: isGitHubPages ? "/hop-share-and-send/" : "./",
+  base: "/hop-share-and-send/",
   server: {
     host: "::",
     port: 8080,
