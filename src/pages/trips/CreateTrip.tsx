@@ -61,15 +61,15 @@ export default function CreateTrip() {
   };
 
   return (
-    <div className="px-4 safe-top pb-8">
-      <div className="pt-6 pb-4 flex items-center gap-3">
+    <div className="mobile-page pb-8">
+      <div className="mobile-header">
         <button onClick={() => navigate(-1)} className="p-1">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-xl font-bold">Publier un trajet</h1>
+        <h1 className="maak-section-title">Publier un trajet</h1>
       </div>
 
-      <div className="space-y-5">
+      <div className="space-y-5 rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
         <div className="space-y-2">
           <Label>Wilaya de départ *</Label>
           <WilayaSelect value={origin} onValueChange={setOrigin} placeholder="D'où partez-vous ?" />
@@ -118,7 +118,7 @@ export default function CreateTrip() {
           />
         </div>
 
-        <Button onClick={handleSubmit} disabled={loading} className="w-full" size="lg">
+        <Button onClick={handleSubmit} disabled={loading} className="w-full maak-primary-btn" size="lg">
           <Route className="h-4 w-4 mr-2" />
           {loading ? "Publication..." : "Publier le trajet"}
         </Button>

@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Route, Clock, CheckCircle2, XCircle, Zap } from "lucide-react";
+import { ArrowLeft, Info, Route, Clock, CheckCircle2, XCircle, Zap } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { computeTripParcelScore, type MatchScore } from "@/lib/matching";
+import { toast } from "sonner";
 
 type TripWithScore = Tables<"trips"> & { score: MatchScore };
 
@@ -14,6 +17,7 @@ export default function ParcelMatches() {
   const [parcel, setParcel] = useState<Tables<"parcel_requests"> | null>(null);
   const [matches, setMatches] = useState<TripWithScore[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
     if (!parcelId) return;
@@ -34,15 +38,46 @@ export default function ParcelMatches() {
     });
   }, [parcelId]);
 
+  const proposeDeal = async (trip: Tables<"trips">) => {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user || !parcelId || !parcel) return;
+
+    const existing = await supabase.from("deals").select("id").eq("trip_id", trip.id).eq("parcel_request_id", parcelId).maybeSingle();
+    if (existing.data?.id) {
+      navigate(`/deals/${existing.data.id}`);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("deals")
+      .insert({
+        trip_id: trip.id,
+        parcel_request_id: parcelId,
+        traveler_user_id: trip.user_id,
+        owner_user_id: auth.user.id,
+        status: "proposed",
+      })
+      .select("id")
+      .single();
+
+    if (error) toast.error(error.message);
+    else navigate(`/deals/${data.id}`);
+  };
+
   return (
-    <div className="px-4 safe-top pb-24">
-      <div className="pt-6 pb-4 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-1"><ArrowLeft className="h-5 w-5" /></button>
-        <h1 className="text-xl font-bold">Trajets compatibles</h1>
+    <div className="mobile-page">
+      <div className="mobile-header justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-1"><ArrowLeft className="h-5 w-5" /></button>
+          <h1 className="maak-section-title">Trajets compatibles</h1>
+        </div>
+        <button onClick={() => setShowInfo((v) => !v)} className="p-1"><Info className="h-5 w-5 text-primary" /></button>
       </div>
 
+      {showInfo && <Card className="maak-card-soft p-3 mb-3 text-sm text-muted-foreground">MAAK propose automatiquement les meilleurs matchs selon départ/arrivée, dates et compatibilité colis/capacité.</Card>}
+
       {parcel && (
-        <Card className="p-3 mb-4 bg-secondary/5 border-secondary/20">
+        <Card className="maak-card-soft p-3 mb-4">
           <p className="text-sm font-medium">Votre colis : {parcel.origin_wilaya} → {parcel.destination_wilaya}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {new Date(parcel.date_window_start).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} - {new Date(parcel.date_window_end).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
@@ -57,7 +92,7 @@ export default function ParcelMatches() {
       ) : (
         <div className="space-y-3">
           {matches.map((m) => (
-            <Card key={m.id} className="p-3.5">
+            <Card key={m.id} className="maak-card p-3.5">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Route className="h-4 w-4 text-primary" />
@@ -74,12 +109,14 @@ export default function ParcelMatches() {
                 {new Date(m.departure_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
               </p>
 
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1.5 mb-3">
                 <ScoreBadge ok={m.score.originMatch} label="Origine" />
                 <ScoreBadge ok={m.score.destinationMatch} label="Destination" />
                 <ScoreBadge ok={m.score.timeMatch} label="Date" />
                 <ScoreBadge ok={m.score.categoryMatch} label="Catégorie" />
               </div>
+
+              <Button className="w-full" onClick={() => proposeDeal(m)}>Proposer ce match</Button>
             </Card>
           ))}
         </div>

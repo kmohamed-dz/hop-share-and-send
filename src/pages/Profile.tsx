@@ -1,17 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { LogOut, Settings, Shield, Star, User } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Settings, Star, Shield, LogOut } from "lucide-react";
+import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 
 export default function Profile() {
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [profile, setProfile] = useState<Tables<"profiles"> | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
 
@@ -33,14 +38,14 @@ export default function Profile() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success("Déconnexion réussie");
-    navigate("/onboarding/welcome");
+    navigate("/auth/login", { replace: true });
   };
 
   if (!user) {
     return (
-      <div className="px-4 safe-top">
-        <div className="pt-6 pb-4">
-          <h1 className="text-xl font-bold">Profil</h1>
+      <div className="mobile-page">
+        <div className="pb-4">
+          <h1 className="maak-section-title">Profil</h1>
         </div>
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -56,12 +61,11 @@ export default function Profile() {
   }
 
   return (
-    <div className="px-4 safe-top">
-      <div className="pt-6 pb-4">
-        <h1 className="text-xl font-bold">Profil</h1>
+    <div className="mobile-page">
+      <div className="pb-4">
+        <h1 className="maak-section-title">Profil</h1>
       </div>
 
-      {/* Profile Card */}
       <div className="flex items-center gap-4 mb-6">
         <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
           <User className="h-7 w-7 text-muted-foreground" />
@@ -72,7 +76,6 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Menu */}
       <div className="space-y-1">
         {[
           { icon: Star, label: "Mes évaluations", to: "/profile/ratings" },

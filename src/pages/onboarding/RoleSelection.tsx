@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Route, Package, Users } from "lucide-react";
+import { ONBOARDING_FLAG_KEY } from "@/components/auth/AuthGate";
 import { cn } from "@/lib/utils";
 
 const ROLES = [
@@ -33,6 +34,7 @@ export default function RoleSelection() {
 
   const handleContinue = () => {
     if (selected) {
+      localStorage.setItem(ONBOARDING_FLAG_KEY, "true");
       navigate("/auth/login", { state: { role: selected } });
     }
   };

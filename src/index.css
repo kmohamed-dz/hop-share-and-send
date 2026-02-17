@@ -118,3 +118,34 @@
     padding-top: env(safe-area-inset-top, 0px);
   }
 }
+
+
+@layer components {
+  .mobile-page {
+    @apply px-4 pt-6 pb-24 safe-top;
+  }
+
+  .mobile-header {
+    @apply flex items-center gap-3 pb-4;
+  }
+
+  .mobile-title {
+    @apply text-2xl font-extrabold tracking-tight text-foreground;
+  }
+
+  .maak-card {
+    @apply rounded-2xl border border-border/80 bg-card shadow-sm;
+  }
+
+  .maak-card-soft {
+    @apply rounded-2xl border border-primary/20 bg-primary/5 shadow-sm;
+  }
+
+  .maak-section-title {
+    @apply text-lg font-bold tracking-tight text-foreground;
+  }
+
+  .maak-primary-btn {
+    @apply h-14 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90;
+  }
+}
