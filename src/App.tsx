@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Welcome from "@/pages/onboarding/Welcome";
 import RoleSelection from "@/pages/onboarding/RoleSelection";
 import Login from "@/pages/auth/Login";
+import AuthCallback from "@/pages/auth/AuthCallback";
 import ProfileSetup from "@/pages/auth/ProfileSetup";
 import Home from "@/pages/Home";
 import Activity from "@/pages/Activity";
@@ -36,6 +37,7 @@ const App = () => (
 
           {/* Auth */}
           <Route path="/auth/login" element={<Login />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/profile/setup" element={<ProfileSetup />} />
 
           {/* Search */}
