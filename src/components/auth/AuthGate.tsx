@@ -25,6 +25,8 @@ function isProtectedPath(pathname: string): boolean {
     pathname.startsWith("/messages") ||
     pathname.startsWith("/profile") ||
     pathname.startsWith("/deals") ||
+    pathname.startsWith("/safety") ||
+    pathname.startsWith("/settings") ||
     pathname.startsWith("/activity") ||
     pathname.startsWith("/browse") ||
     pathname.includes("/matches")

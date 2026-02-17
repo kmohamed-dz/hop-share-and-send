@@ -183,3 +183,31 @@ Why Vite base is configured this way:
 - in local/Capacitor contexts, Vite falls back to `base: "./"`.
 
 This prevents `404` on `/assets/*` and avoids blank screens caused by wrong asset paths.
+
+
+## Matching + Trust + Handoff + Safety (E2E)
+
+### Points clés implémentés
+
+- Match automatique trajet/colis avec score de compatibilité.
+- Deal avec acceptation progressive (`proposed` -> `accepted_by_*` -> `mutually_accepted`).
+- Contact/chat débloqués uniquement après acceptation mutuelle.
+- Code secret de livraison (format `MAAK-XXXX-XX`) généré côté serveur quand le deal devient `mutually_accepted`.
+- Confirmation de prise en charge avec checklist + photo preuve (bucket `handoff_proofs`).
+- Confirmation de livraison via code secret (`verify_delivery_code`) -> statut `delivered_confirmed`.
+- Pages sécurité/paramètres/évaluations sans 404.
+
+### Checklist de test bout-en-bout
+
+1. Créer un trajet avec Utilisateur A.
+2. Créer une demande colis compatible avec Utilisateur B.
+3. Depuis les écrans de match, proposer un deal puis ouvrir son détail.
+4. Vérifier que le contact est masqué avant acceptation mutuelle.
+5. Accepter des deux côtés (A et B) -> statut `mutually_accepted`.
+6. Vérifier que:
+   - le chat est disponible,
+   - le code secret est visible côté expéditeur uniquement.
+7. Côté transporteur: confirmer la prise en charge avec photo + checklist.
+8. Côté transporteur: saisir le code secret correct pour confirmer la livraison.
+9. Vérifier le passage à `delivered_confirmed` et la possibilité de noter.
+10. Créer un signalement depuis `/safety` et vérifier l’insertion dans `reports`.

@@ -31,11 +31,12 @@ export default function CreateParcel() {
   const [category, setCategory] = useState("");
   const [sizeWeight, setSizeWeight] = useState("");
   const [reward, setReward] = useState("");
+  const [contentDescription, setContentDescription] = useState("");
   const [notes, setNotes] = useState("");
   const [forbiddenAck, setForbiddenAck] = useState(false);
 
   const handleSubmit = async () => {
-    if (!origin || !destination || !dateStart || !dateEnd || !category) {
+    if (!origin || !destination || !dateStart || !dateEnd || !category || !sizeWeight || !reward || !contentDescription.trim()) {
       toast({ title: "Champs requis", description: "Veuillez remplir tous les champs obligatoires.", variant: "destructive" });
       return;
     }
@@ -56,6 +57,8 @@ export default function CreateParcel() {
       return;
     }
 
+    const mergedNotes = `${contentDescription.trim()}\n${notes}`.trim();
+
     const { error } = await supabase.from("parcel_requests").insert({
       user_id: user.id,
       origin_wilaya: origin,
@@ -65,7 +68,7 @@ export default function CreateParcel() {
       category,
       size_weight: sizeWeight || null,
       reward_dzd: reward ? parseInt(reward, 10) : 0,
-      notes: notes || null,
+      notes: mergedNotes || null,
       forbidden_items_acknowledged: true,
     });
 
@@ -141,6 +144,17 @@ export default function CreateParcel() {
             value={reward}
             onChange={(e) => setReward(e.target.value)}
             min={0}
+          />
+        </div>
+
+
+        <div className="space-y-2">
+          <Label>Contenu déclaré *</Label>
+          <Textarea
+            placeholder="Ex: vêtements, documents, accessoires"
+            value={contentDescription}
+            onChange={(e) => setContentDescription(e.target.value)}
+            maxLength={300}
           />
         </div>
 

@@ -123,7 +123,7 @@ export default function Home() {
             Verifiez toujours l'identite{"\n"}du transporteur avant la remise
           </p>
           <button
-            onClick={() => {}}
+            onClick={() => navigate("/safety")}
             className="mt-3 px-3 py-1.5 bg-primary-foreground text-emerald-900 rounded-lg text-xs font-bold"
           >
             En savoir plus
