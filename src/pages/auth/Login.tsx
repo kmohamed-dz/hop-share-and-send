@@ -27,7 +27,7 @@ export default function Login() {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo: `${window.location.origin}/profile/setup`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: { role: role || "both" },
         },
       });
@@ -49,7 +49,7 @@ export default function Login() {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo: `${window.location.origin}/profile/setup`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: { role: role || "both" },
         },
       });
