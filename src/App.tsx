@@ -20,6 +20,9 @@ import BrowseParcels from "@/pages/browse/BrowseParcels";
 import TripMatches from "@/pages/matches/TripMatches";
 import ParcelMatches from "@/pages/matches/ParcelMatches";
 import SearchPage from "@/pages/Search";
+import Settings from "@/pages/Settings";
+import Ratings from "@/pages/Ratings";
+import Safety from "@/pages/Safety";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,9 +43,11 @@ const App = () => (
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/profile/setup" element={<ProfileSetup />} />
 
-          {/* Search */}
+          {/* Standalone pages */}
           <Route path="/search" element={<SearchPage />} />
-
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/profile/ratings" element={<Ratings />} />
+          <Route path="/safety" element={<Safety />} />
           {/* Creation forms */}
           <Route path="/trips/create" element={<CreateTrip />} />
           <Route path="/parcels/create" element={<CreateParcel />} />
