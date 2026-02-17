@@ -1,29 +1,40 @@
 /**
- * Normalize an Algerian phone number to E.164 format.
+ * Return a local Algerian mobile number (9 digits, without trunk 0).
+ * Accepts user inputs like:
+ * - 0552623560
+ * - 552623560
+ * - +213552623560
+ * - +2130552623560
+ * - 00213552623560
  *
- * Examples:
- * - 0552623560 -> +213552623560
- * - +213552623560 -> +213552623560
- * - +2130552623560 -> +213552623560
+ * Output example: 552623560
  */
-export function normalizeAlgerianPhone(input: string): string {
-  const digits = input.replace(/\D/g, "");
+export function sanitizeAlgerianMobileInput(input: string): string {
+  let digits = input.replace(/\D/g, "");
 
-  // Inputs that already include Algeria country code (213...)
+  if (digits.startsWith("00")) {
+    digits = digits.slice(2);
+  }
+
   if (digits.startsWith("213")) {
-    const localPart = digits.slice(3);
-
-    // Trunk prefix `0` must not be kept after +213
-    const normalizedLocalPart = localPart.startsWith("0") ? localPart.slice(1) : localPart;
-    return `+213${normalizedLocalPart}`;
+    digits = digits.slice(3);
   }
 
-  // Local Algerian mobile format (0XXXXXXXXX)
   if (digits.startsWith("0")) {
-    return `+213${digits.slice(1)}`;
+    digits = digits.slice(1);
   }
 
-  // Direct subscriber number without leading 0 (XXXXXXXXX)
-  return `+213${digits}`;
+  return digits.slice(0, 9);
 }
 
+export function isValidAlgerianMobile(input: string): boolean {
+  return /^[567]\d{8}$/.test(sanitizeAlgerianMobileInput(input));
+}
+
+/**
+ * Normalize to E.164 format.
+ * Example: 0552623560 -> +213552623560
+ */
+export function normalizeAlgerianPhone(input: string): string {
+  return `+213${sanitizeAlgerianMobileInput(input)}`;
+}

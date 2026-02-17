@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { normalizeAlgerianPhone } from "./phone";
+import {
+  isValidAlgerianMobile,
+  normalizeAlgerianPhone,
+  sanitizeAlgerianMobileInput,
+} from "./phone";
 
 describe("normalizeAlgerianPhone", () => {
   it("normalizes local numbers starting with 0", () => {
@@ -20,5 +24,18 @@ describe("normalizeAlgerianPhone", () => {
 
   it("normalizes spaced local input", () => {
     expect(normalizeAlgerianPhone("05 52 62 35 60")).toBe("+213552623560");
+  });
+
+  it("normalizes 00213 international input", () => {
+    expect(normalizeAlgerianPhone("00213 552 62 35 60")).toBe("+213552623560");
+  });
+
+  it("sanitizes pasted +213 input to local 9 digits", () => {
+    expect(sanitizeAlgerianMobileInput("+2130552623560")).toBe("552623560");
+  });
+
+  it("validates only Algerian mobile patterns", () => {
+    expect(isValidAlgerianMobile("552623560")).toBe(true);
+    expect(isValidAlgerianMobile("152623560")).toBe(false);
   });
 });

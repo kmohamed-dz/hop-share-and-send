@@ -6,7 +6,11 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { supabase } from "@/integrations/supabase/client";
-import { normalizeAlgerianPhone } from "@/lib/phone";
+import {
+  isValidAlgerianMobile,
+  normalizeAlgerianPhone,
+  sanitizeAlgerianMobileInput,
+} from "@/lib/phone";
 import { toast } from "sonner";
 
 type LoginLocationState = {
@@ -36,9 +40,9 @@ function isMissingSmsProviderError(message: string): boolean {
 function buildOtpErrorMessage(message: string): { title: string; description?: string } {
   if (isMissingSmsProviderError(message)) {
     return {
-      title: "Configuration requise : activez Phone + SMS Provider (Twilio/MessageBird) dans Supabase.",
+      title: "Configuration requise (Twilio/MessageBird)",
       description:
-        "Le numéro est valide, mais l’envoi SMS nécessite un provider configuré côté Supabase.",
+        "Activez Phone + fournisseur SMS dans Supabase Dashboard pour envoyer les OTP.",
     };
   }
 
@@ -58,13 +62,10 @@ export default function Login() {
   const location = useLocation();
   const role = (location.state as LoginLocationState | null)?.role;
 
-  const rawDigits = phone.replace(/\D/g, "");
-  const isPhoneValid = /^[567]\d{8}$/.test(rawDigits);
+  const isPhoneValid = isValidAlgerianMobile(phone);
 
   const handlePhoneChange = (value: string) => {
-    const digitsOnly = value.replace(/\s+/g, "").replace(/\D/g, "");
-    const withoutTrunkPrefix = digitsOnly.startsWith("0") ? digitsOnly.slice(1) : digitsOnly;
-    setPhone(withoutTrunkPrefix.slice(0, 9));
+    setPhone(sanitizeAlgerianMobileInput(value));
   };
 
   const handleSendOTP = async () => {
