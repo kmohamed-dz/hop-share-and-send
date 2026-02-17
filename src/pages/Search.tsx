@@ -33,13 +33,6 @@ export default function SearchPage() {
 
     const fetchData = async () => {
       if (tab === "trips") {
-        let queryBuilder = supabase
-          .from("trips")
-          .select("*")
-          .eq("status", "active")
-          .order("departure_date", { ascending: true })
-          .limit(20);
-
         if (matchingWilayas.length > 0) {
           // Search by origin or destination wilaya
           const { data } = await supabase
@@ -140,7 +133,7 @@ export default function SearchPage() {
                 {trips.map((trip) => (
                   <Card
                     key={trip.id}
-                    className="p-3.5 cursor-pointer hover:bg-muted/30 transition-colors"
+                    className="maak-card p-3.5 cursor-pointer hover:bg-muted/30 transition-colors"
                     onClick={() => navigate(`/trips/${trip.id}/matches`)}
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -184,7 +177,7 @@ export default function SearchPage() {
                   return (
                     <Card
                       key={parcel.id}
-                      className="p-3.5 cursor-pointer hover:bg-muted/30 transition-colors"
+                      className="maak-card p-3.5 cursor-pointer hover:bg-muted/30 transition-colors"
                       onClick={() => navigate(`/parcels/${parcel.id}/matches`)}
                     >
                       <div className="flex items-center justify-between mb-1">

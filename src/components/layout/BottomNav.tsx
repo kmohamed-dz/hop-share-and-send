@@ -13,8 +13,8 @@ export function BottomNav() {
   const location = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card safe-bottom">
-      <div className="flex items-center justify-around h-16">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-primary/10 bg-card/95 backdrop-blur safe-bottom">
+      <div className="mx-auto flex max-w-md items-center justify-around h-16">
         {NAV_ITEMS.map(({ to, icon: Icon, label }) => {
           const isActive = location.pathname === to;
           return (
