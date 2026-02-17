@@ -205,9 +205,10 @@ export default function DealDetail() {
             )}
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-3 space-y-2">
-            <p className="text-xs text-muted-foreground">
-              Vérifiez la remise en lieu public et suivez le protocole de contact progressif.
-            </p>
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              <li>Contact débloqué uniquement après acceptation</li>
+              <li>Vérifiez le colis à la remise</li>
+            </ul>
             <div className="flex flex-col gap-1.5 text-sm">
               <Link className="text-primary font-medium hover:underline" to="/processus/remise">
                 Voir le processus de remise

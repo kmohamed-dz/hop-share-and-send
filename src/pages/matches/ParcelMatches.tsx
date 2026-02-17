@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Info, Route, Clock, CheckCircle2, XCircle, Zap } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, ChevronDown, ChevronUp, Info, Route, Clock, CheckCircle2, XCircle, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { computeTripParcelScore, type MatchScore } from "@/lib/matching";
@@ -18,6 +19,7 @@ export default function ParcelMatches() {
   const [matches, setMatches] = useState<TripWithScore[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInfo, setShowInfo] = useState(false);
+  const [safetyOpen, setSafetyOpen] = useState(false);
 
   useEffect(() => {
     if (!parcelId) return;
@@ -84,6 +86,33 @@ export default function ParcelMatches() {
           </p>
         </Card>
       )}
+
+      <Collapsible open={safetyOpen} onOpenChange={setSafetyOpen}>
+        <Card className="maak-card p-3 mb-4">
+          <CollapsibleTrigger className="w-full flex items-center justify-between text-left">
+            <span className="text-sm font-semibold">Sécurité</span>
+            {safetyOpen ? (
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2 space-y-2">
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              <li>Contact débloqué uniquement après acceptation</li>
+              <li>Vérifiez le colis à la remise</li>
+            </ul>
+            <div className="flex flex-col gap-1 text-sm">
+              <Link className="text-primary font-medium hover:underline" to="/processus/remise">
+                Voir le processus de remise
+              </Link>
+              <Link className="text-primary font-medium hover:underline" to="/processus/contact">
+                Voir le protocole de contact
+              </Link>
+            </div>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {loading ? (
         <p className="text-center text-sm text-muted-foreground py-12">Recherche de correspondances...</p>
