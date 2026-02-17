@@ -23,9 +23,18 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Une erreur est survenue. Veuillez recharger la page.</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Si le problème persiste, vérifiez la connexion puis réessayez.</p>
+          <div className="max-w-sm space-y-3 rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h1 className="text-xl font-bold text-foreground">Oups, l'application a rencontré une erreur.</h1>
+            <p className="text-sm text-muted-foreground">
+              Rechargez la page. Si le problème persiste, vérifiez la connexion puis réessayez.
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="maak-primary-btn w-full"
+            >
+              Recharger
+            </button>
           </div>
         </div>
       );
