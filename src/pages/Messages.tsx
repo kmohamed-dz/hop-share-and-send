@@ -13,9 +13,14 @@ export default function Messages() {
   const [deals, setDeals] = useState<DealExt[]>([]);
 
   useEffect(() => {
-    supabase.from("deals").select("*").order("updated_at", { ascending: false }).then(({ data }) => {
-      setDeals((data as DealExt[]) ?? []);
-    });
+    supabase
+      .from("deals")
+      .select("*")
+      .in("status", ["mutually_accepted", "picked_up", "delivered_confirmed"])
+      .order("updated_at", { ascending: false })
+      .then(({ data }) => {
+        setDeals((data as DealExt[]) ?? []);
+      });
   }, []);
 
   return (

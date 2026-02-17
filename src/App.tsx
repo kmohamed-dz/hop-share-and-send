@@ -24,6 +24,12 @@ import RoleSelection from "@/pages/onboarding/RoleSelection";
 import Welcome from "@/pages/onboarding/Welcome";
 import CreateParcel from "@/pages/parcels/CreateParcel";
 import CreateTrip from "@/pages/trips/CreateTrip";
+import ProcessusContact from "@/pages/processus/ProcessusContact";
+import ProcessusHub from "@/pages/processus/ProcessusHub";
+import ProcessusMatching from "@/pages/processus/ProcessusMatching";
+import ProcessusRemise from "@/pages/processus/ProcessusRemise";
+import ProcessusSecurite from "@/pages/processus/ProcessusSecurite";
+import ProcessusTraceabilite from "@/pages/processus/ProcessusTraceabilite";
 import Safety from "@/pages/Safety";
 import Settings from "@/pages/Settings";
 import ProfileRatings from "@/pages/ProfileRatings";
@@ -62,6 +68,12 @@ const App = () => (
               <Route path="/parcels/:parcelId/matches" element={<ParcelMatches />} />
               <Route path="/deals/:dealId" element={<DealDetail />} />
               <Route path="/safety" element={<Safety />} />
+              <Route path="/processus" element={<ProcessusHub />} />
+              <Route path="/processus/matching" element={<ProcessusMatching />} />
+              <Route path="/processus/contact" element={<ProcessusContact />} />
+              <Route path="/processus/remise" element={<ProcessusRemise />} />
+              <Route path="/processus/securite" element={<ProcessusSecurite />} />
+              <Route path="/processus/traceabilite" element={<ProcessusTraceabilite />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/profile/ratings" element={<ProfileRatings />} />
 

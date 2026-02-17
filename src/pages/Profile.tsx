@@ -79,7 +79,7 @@ export default function Profile() {
       <div className="space-y-1">
         {[
           { icon: Star, label: "Mes évaluations", to: "/profile/ratings" },
-          { icon: Shield, label: "Sécurité & règles", to: "/safety" },
+          { icon: Shield, label: "Processus & sécurité", to: "/processus" },
           { icon: Settings, label: "Paramètres", to: "/settings" },
         ].map(({ icon: Icon, label, to }) => (
           <button

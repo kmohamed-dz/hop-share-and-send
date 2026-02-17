@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, ShieldAlert } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, ShieldAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -30,6 +31,7 @@ export default function DealDetail() {
   const [contentOk, setContentOk] = useState(false);
   const [sizeOk, setSizeOk] = useState(false);
   const [pickupProof, setPickupProof] = useState<File | null>(null);
+  const [safetyOpen, setSafetyOpen] = useState(false);
 
   const isMutuallyAccepted = deal?.status === "mutually_accepted" || deal?.status === "picked_up" || deal?.status === "delivered_confirmed";
 
@@ -39,6 +41,13 @@ export default function DealDetail() {
     if (deal.traveler_user_id === myUserId) return "traveler";
     return "unknown";
   }, [deal, myUserId]);
+
+  const counterpartyUserId = useMemo(() => {
+    if (!deal) return "";
+    if (role === "sender") return deal.traveler_user_id;
+    if (role === "traveler") return deal.owner_user_id;
+    return "";
+  }, [deal, role]);
 
   const load = async () => {
     if (!dealId) return;
@@ -87,24 +96,32 @@ export default function DealDetail() {
   };
 
   const handlePickup = async () => {
-    if (!dealId || !pickupProof) {
-      toast.error("Ajoutez une photo de preuve");
+    if (!dealId) {
       return;
     }
 
-    const filePath = `${dealId}/pickup-${Date.now()}.jpg`;
-    const { error: uploadError } = await supabase.storage.from("handoff_proofs").upload(filePath, pickupProof, { upsert: false });
-    if (uploadError) {
-      toast.error(uploadError.message);
-      return;
+    let proofReference = "fonction-a-venir://pickup-proof";
+
+    if (pickupProof) {
+      const filePath = `${dealId}/pickup-${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from("handoff_proofs")
+        .upload(filePath, pickupProof, { upsert: false });
+
+      if (uploadError) {
+        toast.info("Upload photo indisponible, preuve marquée: fonction à venir.");
+      } else {
+        proofReference = `storage://handoff_proofs/${filePath}`;
+      }
+    } else {
+      toast.info("Photo optionnelle non fournie: preuve marquée fonction à venir.");
     }
 
-    const { data } = supabase.storage.from("handoff_proofs").getPublicUrl(filePath);
     const { data: ok, error } = await supabase.rpc("confirm_pickup", {
       p_deal_id: dealId,
       p_content_ok: contentOk,
       p_size_ok: sizeOk,
-      p_photo_url: data.publicUrl,
+      p_photo_url: proofReference,
     });
 
     if (error || !ok) toast.error(error?.message ?? "Pickup impossible");
@@ -158,6 +175,7 @@ export default function DealDetail() {
           <li className={["mutually_accepted", "picked_up", "delivered_confirmed"].includes(deal.status) ? "text-foreground" : ""}>• Accepté par les deux parties</li>
           <li className={["picked_up", "delivered_confirmed"].includes(deal.status) ? "text-foreground" : ""}>• Pris en charge</li>
           <li className={deal.status === "delivered_confirmed" ? "text-foreground" : ""}>• Livré et confirmé</li>
+          <li className={deal.status === "cancelled" ? "text-destructive font-semibold" : ""}>• Annulé</li>
         </ul>
       </Card>
 
@@ -175,6 +193,32 @@ export default function DealDetail() {
           <p className="text-sm text-muted-foreground">Contact disponible après acceptation des deux parties.</p>
         )}
       </Card>
+
+      <Collapsible open={safetyOpen} onOpenChange={setSafetyOpen}>
+        <Card className="maak-card p-4">
+          <CollapsibleTrigger className="w-full flex items-center justify-between text-left">
+            <span className="text-sm font-semibold">Sécurité</span>
+            {safetyOpen ? (
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-3 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Vérifiez la remise en lieu public et suivez le protocole de contact progressif.
+            </p>
+            <div className="flex flex-col gap-1.5 text-sm">
+              <Link className="text-primary font-medium hover:underline" to="/processus/remise">
+                Voir le processus de remise
+              </Link>
+              <Link className="text-primary font-medium hover:underline" to="/processus/contact">
+                Voir le protocole de contact
+              </Link>
+            </div>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {(deal.status === "proposed" || deal.status === "accepted_by_sender" || deal.status === "accepted_by_traveler") && (
         <Button className="w-full maak-primary-btn" onClick={handleAccept}>Accepter</Button>
@@ -194,7 +238,8 @@ export default function DealDetail() {
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={contentOk} onChange={(e) => setContentOk(e.target.checked)} /> Contenu conforme</label>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sizeOk} onChange={(e) => setSizeOk(e.target.checked)} /> Dimensions/poids conformes</label>
           <Input type="file" accept="image/*" onChange={(e) => setPickupProof(e.target.files?.[0] ?? null)} />
-          <Button className="w-full" onClick={handlePickup} disabled={!contentOk || !sizeOk || !pickupProof}>Confirmer la prise en charge</Button>
+          <p className="text-xs text-muted-foreground">Photo optionnelle. Si le stockage n'est pas configuré, la preuve est marquée "fonction à venir".</p>
+          <Button className="w-full" onClick={handlePickup} disabled={!contentOk || !sizeOk}>Confirmer la prise en charge</Button>
         </Card>
       )}
 
@@ -214,7 +259,16 @@ export default function DealDetail() {
       )}
 
       <div className="grid grid-cols-2 gap-2">
-        <Button variant="outline" className="w-full" onClick={() => navigate("/safety")}>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => {
+            const params = new URLSearchParams();
+            params.set("dealId", deal.id);
+            if (counterpartyUserId) params.set("targetUserId", counterpartyUserId);
+            navigate(`/safety?${params.toString()}`);
+          }}
+        >
           <ShieldAlert className="h-4 w-4 mr-2" /> Signaler
         </Button>
         {deal.status === "delivered_confirmed" && (
