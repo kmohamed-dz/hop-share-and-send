@@ -15,12 +15,24 @@ export default function ProfileSetup() {
   const role = (location.state as any)?.role || "both";
 
   useEffect(() => {
-    // Check if user is authenticated
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check if user is authenticated; if not, redirect
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate("/onboarding/welcome");
+      } else {
+        // Check if profile already exists → go home
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        if (profile) {
+          navigate("/");
+        }
       }
-    });
+    };
+    checkAuth();
   }, [navigate]);
 
   const handleSubmit = async () => {
