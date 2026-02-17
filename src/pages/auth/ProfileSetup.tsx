@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Camera, User } from "lucide-react";
 
-import { REDIRECT_AFTER_LOGIN_KEY } from "@/components/auth/AuthGate";
+import { ONBOARDING_FLAG_KEY, REDIRECT_AFTER_LOGIN_KEY } from "@/components/auth/AuthGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +57,7 @@ export default function ProfileSetup() {
       toast.error("Erreur: " + error.message);
     } else {
       toast.success("Profil créé !");
+      localStorage.setItem(ONBOARDING_FLAG_KEY, "true");
       const redirectPath = localStorage.getItem(REDIRECT_AFTER_LOGIN_KEY);
       if (redirectPath) {
         localStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);

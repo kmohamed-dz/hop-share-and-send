@@ -26,6 +26,7 @@ function isProtectedPath(pathname: string): boolean {
     pathname.startsWith("/profile") ||
     pathname.startsWith("/deals") ||
     pathname.startsWith("/safety") ||
+    pathname.startsWith("/processus") ||
     pathname.startsWith("/settings") ||
     pathname.startsWith("/activity") ||
     pathname.startsWith("/browse") ||
@@ -145,6 +146,10 @@ export function AuthGate() {
       return;
     }
 
+    if (!onboardingDone) {
+      localStorage.setItem(ONBOARDING_FLAG_KEY, "true");
+    }
+
     if (!computedProfileComplete) {
       if (pathname !== "/auth/profile-setup") {
         navigate("/auth/profile-setup", { replace: true });
@@ -171,7 +176,7 @@ export function AuthGate() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-sm font-semibold text-muted-foreground">Chargement…</p>
+        <p className="text-sm font-semibold text-muted-foreground">Chargement...</p>
       </div>
     );
   }
