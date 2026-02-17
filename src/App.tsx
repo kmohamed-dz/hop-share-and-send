@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { AuthGate } from "@/components/auth/AuthGate";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Login from "@/pages/auth/Login";
 import ProfileSetup from "@/pages/auth/ProfileSetup";
@@ -26,7 +27,8 @@ import CreateTrip from "@/pages/trips/CreateTrip";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -60,7 +62,8 @@ const App = () => (
         </Routes>
       </HashRouter>
     </TooltipProvider>
-  </QueryClientProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

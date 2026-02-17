@@ -168,3 +168,18 @@ Used on:
 - login screen
 - home header
 - favicon and social preview (`public/favicon.svg`, `index.html`)
+
+
+## GitHub Pages deployment
+
+This project is deployed with GitHub Actions from `dist/` (not from repository root files):
+
+- workflow: `.github/workflows/deploy-pages.yml`
+- artifact path: `dist/`
+
+Why Vite base is configured this way:
+
+- on GitHub Pages, the app is served under `/hop-share-and-send/`, so Vite uses `base: "/hop-share-and-send/"` during Actions builds.
+- in local/Capacitor contexts, Vite falls back to `base: "./"`.
+
+This prevents `404` on `/assets/*` and avoids blank screens caused by wrong asset paths.
