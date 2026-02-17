@@ -4,6 +4,7 @@ const config: CapacitorConfig = {
   appId: "com.maak.app",
   appName: "MAAK",
   webDir: "dist",
+  bundledWebRuntime: false ,
   server: {
     androidScheme: "https",
     cleartext: false,
