@@ -1,47 +1,52 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Globe, Moon, Shield, BookOpen } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { ArrowLeft, ChevronRight, Settings as SettingsIcon, Shield, Workflow } from "lucide-react";
+
+import { Card } from "@/components/ui/card";
 
 export default function Settings() {
   const navigate = useNavigate();
-
   return (
-    <div className="px-4 safe-top pb-8">
-      <div className="pt-6 pb-4 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-1">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-xl font-bold">Paramètres</h1>
+    <div className="mobile-page space-y-4">
+      <div className="mobile-header">
+        <button onClick={() => navigate(-1)} className="p-1"><ArrowLeft className="h-5 w-5" /></button>
+        <h1 className="maak-section-title">Paramètres</h1>
       </div>
+      <Card className="maak-card p-4 flex items-center gap-3">
+        <SettingsIcon className="h-5 w-5 text-primary" />
+        <p className="text-sm">Préférences de notification, confidentialité et compte (à venir).</p>
+      </Card>
 
-      <div className="space-y-1">
-        {[
-          { icon: Bell, label: "Notifications", desc: "Gérer les alertes" },
-          { icon: Globe, label: "Langue", desc: "Français" },
-          { icon: Moon, label: "Mode sombre", desc: "Apparence de l'app", toggle: true },
-          { icon: Shield, label: "Confidentialité", desc: "Données et vie privée" },
-          { icon: BookOpen, label: "Processus & sécurité", desc: "Comment MAAK fonctionne", link: "/processus" },
-        ].map(({ icon: Icon, label, desc, toggle, link }) => (
-          <div
-            key={label}
-            className="flex items-center justify-between p-3 rounded-xl hover:bg-muted transition-colors cursor-pointer"
-            onClick={() => link && navigate(link)}
-          >
-            <div className="flex items-center gap-3">
-              <Icon className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">{label}</p>
-                <p className="text-xs text-muted-foreground">{desc}</p>
-              </div>
+      <button
+        onClick={() => navigate("/processus")}
+        className="w-full"
+      >
+        <Card className="maak-card p-4 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors">
+          <div className="flex items-center gap-3 text-left">
+            <Workflow className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-sm font-semibold">Processus & sécurité</p>
+              <p className="text-xs text-muted-foreground">Matching, contact, remise et traçabilité</p>
             </div>
-            {toggle && <Switch />}
           </div>
-        ))}
-      </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </Card>
+      </button>
 
-      <p className="text-xs text-muted-foreground text-center mt-8">
-        Version 1.0.0 — WasselniDZ
-      </p>
+      <button
+        onClick={() => navigate("/safety")}
+        className="w-full"
+      >
+        <Card className="maak-card p-4 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors">
+          <div className="flex items-center gap-3 text-left">
+            <Shield className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-sm font-semibold">Signaler un incident</p>
+              <p className="text-xs text-muted-foreground">Créer un signalement sécurité</p>
+            </div>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </Card>
+      </button>
     </div>
   );
 }

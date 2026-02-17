@@ -13,6 +13,7 @@ import {
   Star,
   User,
 } from "lucide-react";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -44,10 +45,13 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="px-4 safe-top">
+    <div className="mobile-page">
       {/* Header */}
       <div className="pt-6 pb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold text-primary">MAAK</h1>
+        <div className="flex items-center gap-2">
+          <BrandLogo size="sm" className="h-8" />
+          <h1 className="text-2xl font-extrabold text-primary">MAAK</h1>
+        </div>
         <div className="flex items-center gap-3">
           <button className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
             <Bell className="h-5 w-5 text-primary" />
@@ -106,28 +110,28 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Security Tip Banner */}
-      <Card className="p-4 mb-6 bg-secondary border-0 text-secondary-foreground rounded-2xl relative overflow-hidden">
+      {/* Security Tip Banner (replaces promo banner) */}
+      <Card className="p-4 mb-6 bg-emerald-900 border-0 text-primary-foreground rounded-2xl relative overflow-hidden">
         <div className="relative z-10">
           <div className="flex items-center gap-1.5 mb-1">
             <Shield className="h-4 w-4" />
-            <span className="text-xs font-bold uppercase tracking-wide opacity-80">
-              Conseil sécurité
+            <span className="text-xs font-bold uppercase tracking-wide text-emerald-300">
+              CONSEIL SÉCURITÉ
             </span>
           </div>
           <p className="font-bold text-sm leading-snug">
-            Vérifiez toujours l'identité{"\n"}du transporteur avant la remise
+            Vérifiez toujours l’identité{"\n"}du transporteur avant la remise
           </p>
-          <div className="flex items-center gap-3 mt-3">
+          <div className="mt-3 flex items-center gap-3">
             <button
-              onClick={() => navigate("/processus/securite")}
-              className="px-3 py-1.5 bg-primary-foreground text-secondary rounded-lg text-xs font-bold"
+              onClick={() => navigate("/safety")}
+              className="px-3 py-1.5 bg-primary-foreground text-emerald-900 rounded-lg text-xs font-bold"
             >
               En savoir plus
             </button>
             <button
               onClick={() => navigate("/processus")}
-              className="text-xs font-semibold underline underline-offset-2 opacity-90"
+              className="text-xs font-semibold underline underline-offset-2 text-emerald-200"
             >
               Comment ça marche ?
             </button>
@@ -259,7 +263,7 @@ export default function Home() {
               return (
                 <Card
                   key={parcel.id}
-                  className="p-3.5 cursor-pointer hover:shadow-md transition-shadow border border-border"
+                  className="maak-card p-3.5 cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => navigate(`/parcels/${parcel.id}/matches`)}
                 >
                   <div className="flex items-center justify-between mb-1">

@@ -1,71 +1,100 @@
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserCheck, ClipboardList, Lock, Star, Flag } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Shield, UserCheck, PackageSearch, LockKeyhole, Star, Siren, type LucideIcon } from "lucide-react";
+import { ProcessusShell } from "./ProcessusShell";
 
-const layers = [
+type LayerStatus = "MVP" | "À venir";
+
+interface Layer {
+  icon: LucideIcon;
+  title: string;
+  why: string;
+  status: LayerStatus;
+  details: string;
+}
+
+const layers: Layer[] = [
   {
     icon: UserCheck,
-    title: "Vérification d'identité",
-    why: "Garantit que chaque utilisateur est une personne réelle et identifiable.",
-    status: "À venir (MVP+)",
+    title: "Vérification d’identité",
+    why: "Réduire les comptes anonymes et poser une base de confiance minimale.",
+    status: "MVP",
+    details: "Compte lié à un utilisateur authentifié dans l’application.",
   },
   {
-    icon: ClipboardList,
-    title: "Déclaration du colis",
-    why: "Le contenu, les dimensions et la valeur estimée sont déclarés avant tout envoi, limitant les abus.",
+    icon: PackageSearch,
+    title: "Déclaration du colis (contenu, dimensions, valeur estimée)",
+    why: "Limiter les surprises au moment de la remise et mieux filtrer les risques.",
     status: "MVP",
+    details: "Déclaration structurée lors de la création de la demande d’envoi.",
   },
   {
-    icon: Lock,
-    title: "Divulgation progressive",
-    why: "Le contact reste verrouillé jusqu'au consentement bilatéral, empêchant le spam et protégeant la vie privée.",
-    status: "MVP",
+    icon: LockKeyhole,
+    title: "Divulgation progressive (contact verrouillé + consentement bilatéral)",
+    why: "Protéger la vie privée avant qu’un accord mutuel ne soit validé.",
+    status: "À venir",
+    details: "Plan MVP+ avec déverrouillage contact uniquement après double acceptation.",
   },
   {
     icon: Star,
     title: "Score de réputation",
-    why: "Chaque transaction terminée met à jour la réputation, rendant les utilisateurs fiables visibles.",
-    status: "MVP",
+    why: "Récompenser les bons comportements et aider au choix d’un correspondant fiable.",
+    status: "À venir",
+    details: "Le score sera alimenté par l’historique de transactions confirmées.",
   },
   {
-    icon: Flag,
+    icon: Siren,
     title: "Signalement & escalade",
-    why: "Les utilisateurs peuvent signaler un comportement suspect, déclenchant une revue et des mesures.",
-    status: "MVP",
+    why: "Permettre une réaction rapide en cas d’incident ou de comportement suspect.",
+    status: "À venir",
+    details: "Canal de signalement dédié et traitement prioritaire des cas sensibles.",
   },
 ];
 
 export default function ProcessusSecurite() {
-  const navigate = useNavigate();
   return (
-    <div className="px-4 safe-top pb-24">
-      <div className="pt-6 pb-4 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-1">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-xl font-bold">Sécurité</h1>
-      </div>
+    <ProcessusShell
+      title="5 couches de sécurité MAAK"
+      subtitle="Cadre sécurité produit avec transparence sur le niveau d’avancement."
+      showHubLink
+    >
+      <section className="maak-card p-4 border-warning/40 bg-warning/5">
+        <div className="flex items-center gap-2 mb-1">
+          <Shield className="h-4 w-4 text-warning" />
+          <p className="font-semibold text-sm">Transparence produit</p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Les couches marquées “À venir” font partie du plan MVP+ et ne sont pas
+          présentées comme déjà déployées.
+        </p>
+      </section>
 
-      <h2 className="font-bold text-base mb-3">5 couches de sécurité MAAK</h2>
-
-      <div className="space-y-3">
-        {layers.map(({ icon: Icon, title, why, status }, i) => (
-          <Card key={title} className="p-4 border border-border">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <Icon className="h-4 w-4 text-primary" />
+      <section className="space-y-3">
+        {layers.map(({ icon: Icon, title, why, status, details }) => (
+          <article key={title} className="maak-card p-4 space-y-2.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Icon className="h-4 w-4 text-primary" />
+                </div>
+                <h2 className="font-semibold text-sm leading-snug">{title}</h2>
               </div>
-              <div className="flex-1">
-                <p className="font-semibold text-sm">{i + 1}. {title}</p>
-              </div>
-              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${status === "MVP" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                {status}
+              <span
+                className={`text-[11px] font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
+                  status === "MVP"
+                    ? "bg-primary/15 text-primary"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                Statut: {status}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground"><strong>Pourquoi c'est important :</strong> {why}</p>
-          </Card>
+            <div className="text-sm">
+              <p className="font-medium">Pourquoi c’est important</p>
+              <p className="text-muted-foreground">{why}</p>
+            </div>
+            <p className="text-xs text-muted-foreground">{details}</p>
+          </article>
         ))}
-      </div>
-    </div>
+      </section>
+    </ProcessusShell>
   );
 }
