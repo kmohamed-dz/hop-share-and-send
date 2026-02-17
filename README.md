@@ -211,3 +211,13 @@ This prevents `404` on `/assets/*` and avoids blank screens caused by wrong asse
 8. Côté transporteur: saisir le code secret correct pour confirmer la livraison.
 9. Vérifier le passage à `delivered_confirmed` et la possibilité de noter.
 10. Créer un signalement depuis `/safety` et vérifier l’insertion dans `reports`.
+
+
+### CI checks (PR mergeability)
+
+The branch checks are executed by GitHub Actions workflows:
+
+- `.github/workflows/ci.yml`: lint + test + build
+- `.github/workflows/deploy-pages.yml`: build + Pages deploy artifact
+
+Both workflows use **pnpm** with `pnpm-lock.yaml` to avoid `npm ci` lockfile failures.
