@@ -74,6 +74,7 @@ npx cap sync
 
 Placeholder files are available in `resources/`:
 
+- `resources/maak-logo.svg`
 - `resources/icon-placeholder.svg`
 - `resources/splash-placeholder.svg`
 
@@ -134,3 +135,36 @@ If you see `Le service SMS n'est pas encore configuré…`, Supabase Auth is not
    - Confirm SMS is actually received, then verify OTP in the app.
 
 > Note: phone OTP delivery is controlled by Supabase Auth provider configuration. App code cannot send SMS if Twilio/MessageBird is not configured.
+
+
+## Entry flow (AuthGate)
+
+The app now enforces this startup flow on every launch:
+
+1. New/guest user (no session):
+   - if `maak_onboarding_done !== "true"` -> `/onboarding/welcome`
+   - else -> `/auth/login`
+2. Authenticated user with incomplete profile -> `/auth/profile-setup`
+3. Authenticated user with complete profile -> `/`
+
+Local storage keys:
+
+- `maak_onboarding_done`
+- `maak_redirect_after_login`
+
+On logout, onboarding is not reset.
+
+
+## Branding
+
+Brand logo is centralized in:
+
+- `src/assets/brand/maak-logo.svg`
+- reusable UI component: `src/components/brand/BrandLogo.tsx`
+
+Used on:
+
+- onboarding welcome
+- login screen
+- home header
+- favicon and social preview (`public/favicon.svg`, `index.html`)

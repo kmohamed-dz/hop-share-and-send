@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Info, Smartphone } from "lucide-react";
 
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { supabase } from "@/integrations/supabase/client";
@@ -119,7 +120,7 @@ export default function Login() {
         toast.error("Code invalide", { description: error.message });
       } else {
         toast.success("Connexion reussie !");
-        navigate("/profile/setup", { state: { role } });
+        navigate("/auth/profile-setup", { state: { role } });
       }
     } catch {
       toast.error("Erreur de connexion", {
@@ -143,6 +144,9 @@ export default function Login() {
       </div>
 
       <div className="px-6 pt-6 pb-8">
+        <div className="mb-4 flex justify-center">
+          <BrandLogo size="md" className="h-14" />
+        </div>
         <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center mb-6">
           <Smartphone className="h-8 w-8 text-emerald-500" />
         </div>

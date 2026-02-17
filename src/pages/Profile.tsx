@@ -38,7 +38,7 @@ export default function Profile() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success("Déconnexion réussie");
-    navigate("/onboarding/welcome");
+    navigate("/auth/login", { replace: true });
   };
 
   if (!user) {

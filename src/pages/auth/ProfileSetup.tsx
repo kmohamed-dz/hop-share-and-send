@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Camera, User } from "lucide-react";
+
+import { REDIRECT_AFTER_LOGIN_KEY } from "@/components/auth/AuthGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { User, Camera } from "lucide-react";
 
 export default function ProfileSetup() {
   const [name, setName] = useState("");
@@ -15,11 +17,15 @@ export default function ProfileSetup() {
   const role = (location.state as { role?: string } | null)?.role || "both";
 
   useEffect(() => {
-    // Check if user is authenticated
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
-        navigate("/onboarding/welcome");
+        navigate("/auth/login", { replace: true });
+        return;
       }
+
+      supabase.from("profiles").select("name, role_preference").eq("user_id", session.user.id).maybeSingle().then(({ data }) => {
+        if (data?.name) setName(data.name);
+      });
     });
   }, [navigate]);
 
@@ -30,7 +36,9 @@ export default function ProfileSetup() {
     }
 
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
       toast.error("Erreur d'authentification");
@@ -49,7 +57,13 @@ export default function ProfileSetup() {
       toast.error("Erreur: " + error.message);
     } else {
       toast.success("Profil créé !");
-      navigate("/");
+      const redirectPath = localStorage.getItem(REDIRECT_AFTER_LOGIN_KEY);
+      if (redirectPath) {
+        localStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
+        navigate(redirectPath, { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     }
     setLoading(false);
   };
@@ -62,7 +76,6 @@ export default function ProfileSetup() {
       </div>
 
       <div className="flex-1 space-y-6">
-        {/* Avatar placeholder */}
         <div className="flex justify-center">
           <div className="relative">
             <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center">
@@ -75,7 +88,9 @@ export default function ProfileSetup() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="name" className="text-base">Nom complet</Label>
+          <Label htmlFor="name" className="text-base">
+            Nom complet
+          </Label>
           <Input
             id="name"
             placeholder="Votre nom"

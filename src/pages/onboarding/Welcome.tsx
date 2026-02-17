@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Car, ChevronDown, MapPin, Package, Shield, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand/BrandLogo";
+import { ONBOARDING_FLAG_KEY } from "@/components/auth/AuthGate";
 import { cn } from "@/lib/utils";
 
 const SLIDES = [
@@ -36,6 +38,7 @@ export default function Welcome() {
       return;
     }
 
+    localStorage.setItem(ONBOARDING_FLAG_KEY, "true");
     navigate("/onboarding/role");
   };
 
@@ -48,7 +51,7 @@ export default function Welcome() {
           <MapPin className="h-5 w-5 text-primary" />
         </div>
 
-        <span className="text-[2rem] font-extrabold leading-none tracking-tight">MAAK</span>
+        <BrandLogo size="sm" className="h-10" />
 
         <button className="flex items-center gap-1 rounded-full border border-primary/25 px-3 py-1.5 text-sm font-semibold text-primary">
           FR <ChevronDown className="h-4 w-4" />
@@ -69,6 +72,10 @@ export default function Welcome() {
               </div>
             ))}
           </div>
+        </div>
+
+        <div className="mb-5 rounded-2xl bg-card/60 px-4 py-2 shadow-sm">
+          <BrandLogo size="lg" className="h-24" />
         </div>
 
         <h1 className="mb-3 text-5xl font-black tracking-tight text-foreground">
@@ -95,7 +102,13 @@ export default function Welcome() {
         </Button>
 
         {currentSlide === 0 && (
-          <button onClick={() => navigate("/auth/login")} className="w-full text-center text-base text-muted-foreground">
+          <button
+            onClick={() => {
+              localStorage.setItem(ONBOARDING_FLAG_KEY, "true");
+              navigate("/auth/login");
+            }}
+            className="w-full text-center text-base text-muted-foreground"
+          >
             J'ai déjà un compte →
           </button>
         )}

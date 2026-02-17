@@ -13,6 +13,7 @@ import {
   Star,
   User,
 } from "lucide-react";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -47,7 +48,10 @@ export default function Home() {
     <div className="mobile-page">
       {/* Header */}
       <div className="pt-6 pb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold text-primary">MAAK</h1>
+        <div className="flex items-center gap-2">
+          <BrandLogo size="sm" className="h-8" />
+          <h1 className="text-2xl font-extrabold text-primary">MAAK</h1>
+        </div>
         <div className="flex items-center gap-3">
           <button className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
             <Bell className="h-5 w-5 text-primary" />
