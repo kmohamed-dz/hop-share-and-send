@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Globe, Moon, Shield } from "lucide-react";
+import { ArrowLeft, Bell, Globe, Moon, Shield, BookOpen } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 export default function Settings() {
@@ -20,10 +20,12 @@ export default function Settings() {
           { icon: Globe, label: "Langue", desc: "Français" },
           { icon: Moon, label: "Mode sombre", desc: "Apparence de l'app", toggle: true },
           { icon: Shield, label: "Confidentialité", desc: "Données et vie privée" },
-        ].map(({ icon: Icon, label, desc, toggle }) => (
+          { icon: BookOpen, label: "Processus & sécurité", desc: "Comment MAAK fonctionne", link: "/processus" },
+        ].map(({ icon: Icon, label, desc, toggle, link }) => (
           <div
             key={label}
-            className="flex items-center justify-between p-3 rounded-xl hover:bg-muted transition-colors"
+            className="flex items-center justify-between p-3 rounded-xl hover:bg-muted transition-colors cursor-pointer"
+            onClick={() => link && navigate(link)}
           >
             <div className="flex items-center gap-3">
               <Icon className="h-5 w-5 text-muted-foreground" />

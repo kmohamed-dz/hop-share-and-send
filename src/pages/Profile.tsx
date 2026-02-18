@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Settings, Star, Shield, LogOut } from "lucide-react";
+import { User, Settings, Star, Shield, LogOut, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Profile() {
@@ -76,6 +76,7 @@ export default function Profile() {
       <div className="space-y-1">
         {[
           { icon: Star, label: "Mes évaluations", to: "/profile/ratings" },
+          { icon: BookOpen, label: "Processus & sécurité", to: "/processus" },
           { icon: Shield, label: "Sécurité & règles", to: "/safety" },
           { icon: Settings, label: "Paramètres", to: "/settings" },
         ].map(({ icon: Icon, label, to }) => (

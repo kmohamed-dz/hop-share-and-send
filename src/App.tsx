@@ -24,6 +24,12 @@ import Settings from "@/pages/Settings";
 import Ratings from "@/pages/Ratings";
 import Safety from "@/pages/Safety";
 import NotFound from "@/pages/NotFound";
+import ProcessusHub from "@/pages/processus/ProcessusHub";
+import ProcessusMatching from "@/pages/processus/ProcessusMatching";
+import ProcessusContact from "@/pages/processus/ProcessusContact";
+import ProcessusRemise from "@/pages/processus/ProcessusRemise";
+import ProcessusSecurite from "@/pages/processus/ProcessusSecurite";
+import ProcessusTraceabilite from "@/pages/processus/ProcessusTraceabilite";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +54,13 @@ const App = () => (
           <Route path="/settings" element={<Settings />} />
           <Route path="/profile/ratings" element={<Ratings />} />
           <Route path="/safety" element={<Safety />} />
+          {/* Processus & Sécurité */}
+          <Route path="/processus" element={<ProcessusHub />} />
+          <Route path="/processus/matching" element={<ProcessusMatching />} />
+          <Route path="/processus/contact" element={<ProcessusContact />} />
+          <Route path="/processus/remise" element={<ProcessusRemise />} />
+          <Route path="/processus/securite" element={<ProcessusSecurite />} />
+          <Route path="/processus/traceabilite" element={<ProcessusTraceabilite />} />
           {/* Creation forms */}
           <Route path="/trips/create" element={<CreateTrip />} />
           <Route path="/parcels/create" element={<CreateParcel />} />

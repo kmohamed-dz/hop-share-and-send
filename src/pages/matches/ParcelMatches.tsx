@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { computeTripParcelScore, type MatchScore } from "@/lib/matching";
+import { MatchSecurityInfo } from "@/components/MatchSecurityInfo";
 
 type TripWithScore = Tables<"trips"> & { score: MatchScore };
 
@@ -84,6 +85,8 @@ export default function ParcelMatches() {
           ))}
         </div>
       )}
+
+      <MatchSecurityInfo />
     </div>
   );
 }
