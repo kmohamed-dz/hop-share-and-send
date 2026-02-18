@@ -106,24 +106,32 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Security Tip Banner (replaces promo banner) */}
-      <Card className="p-4 mb-6 bg-emerald-900 border-0 text-primary-foreground rounded-2xl relative overflow-hidden">
+      {/* Security Tip Banner */}
+      <Card className="p-4 mb-6 bg-secondary border-0 text-secondary-foreground rounded-2xl relative overflow-hidden">
         <div className="relative z-10">
           <div className="flex items-center gap-1.5 mb-1">
             <Shield className="h-4 w-4" />
-            <span className="text-xs font-bold uppercase tracking-wide text-emerald-300">
-              Conseil securite
+            <span className="text-xs font-bold uppercase tracking-wide opacity-80">
+              Conseil sécurité
             </span>
           </div>
           <p className="font-bold text-sm leading-snug">
-            Verifiez toujours l'identite{"\n"}du transporteur avant la remise
+            Vérifiez toujours l'identité{"\n"}du transporteur avant la remise
           </p>
-          <button
-            onClick={() => {}}
-            className="mt-3 px-3 py-1.5 bg-primary-foreground text-emerald-900 rounded-lg text-xs font-bold"
-          >
-            En savoir plus
-          </button>
+          <div className="flex items-center gap-3 mt-3">
+            <button
+              onClick={() => navigate("/processus/securite")}
+              className="px-3 py-1.5 bg-primary-foreground text-secondary rounded-lg text-xs font-bold"
+            >
+              En savoir plus
+            </button>
+            <button
+              onClick={() => navigate("/processus")}
+              className="text-xs font-semibold underline underline-offset-2 opacity-90"
+            >
+              Comment ça marche ?
+            </button>
+          </div>
         </div>
         <div className="absolute right-0 bottom-0 opacity-10">
           <Shield className="h-24 w-24" />

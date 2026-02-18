@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { computeTripParcelScore, type MatchScore } from "@/lib/matching";
 import { PARCEL_CATEGORIES } from "@/data/wilayas";
+import { MatchSecurityInfo } from "@/components/MatchSecurityInfo";
 
 type ParcelWithScore = Tables<"parcel_requests"> & { score: MatchScore };
 
@@ -90,6 +91,8 @@ export default function TripMatches() {
           })}
         </div>
       )}
+
+      <MatchSecurityInfo />
     </div>
   );
 }

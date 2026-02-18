@@ -38,11 +38,14 @@ export type Database = {
       deals: {
         Row: {
           created_at: string
+          delivered_at: string | null
           id: string
           owner_confirmed_delivery: boolean | null
           owner_confirmed_pickup: boolean | null
           owner_user_id: string
           parcel_request_id: string | null
+          pickup_confirmed_at: string | null
+          pickup_photo_url: string | null
           status: string
           traveler_confirmed_delivery: boolean | null
           traveler_confirmed_pickup: boolean | null
@@ -52,11 +55,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          delivered_at?: string | null
           id?: string
           owner_confirmed_delivery?: boolean | null
           owner_confirmed_pickup?: boolean | null
           owner_user_id: string
           parcel_request_id?: string | null
+          pickup_confirmed_at?: string | null
+          pickup_photo_url?: string | null
           status?: string
           traveler_confirmed_delivery?: boolean | null
           traveler_confirmed_pickup?: boolean | null
@@ -66,11 +72,14 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          delivered_at?: string | null
           id?: string
           owner_confirmed_delivery?: boolean | null
           owner_confirmed_pickup?: boolean | null
           owner_user_id?: string
           parcel_request_id?: string | null
+          pickup_confirmed_at?: string | null
+          pickup_photo_url?: string | null
           status?: string
           traveler_confirmed_delivery?: boolean | null
           traveler_confirmed_pickup?: boolean | null
