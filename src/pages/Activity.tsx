@@ -21,7 +21,9 @@ function TripCard({ trip, onCancel }: { trip: Tables<"trips">; onCancel: (id: st
         {isActive ? (
           <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Actif</span>
         ) : (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">{trip.status === "cancelled" ? "Annulé" : "Terminé"}</span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+            {trip.status === "cancelled" ? "Annulé" : trip.status === "expired" ? "Expiré" : "Terminé"}
+          </span>
         )}
       </div>
       <p className="text-xs text-muted-foreground mb-1">
@@ -58,7 +60,9 @@ function ParcelCard({ parcel, onCancel }: { parcel: Tables<"parcel_requests">; o
         {isActive ? (
           <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Actif</span>
         ) : (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">{parcel.status === "cancelled" ? "Annulé" : "Terminé"}</span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+            {parcel.status === "cancelled" ? "Annulé" : parcel.status === "expired" ? "Expiré" : "Terminé"}
+          </span>
         )}
       </div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">

@@ -8,32 +8,75 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import {
+  isChatUnlocked,
+  isDealClosed,
+  isMutuallyAcceptedOrLater,
+  normalizeDealStatus,
+  syncMarketplaceExpirations,
+} from "@/lib/marketplace";
 import { toast } from "sonner";
 
 type DealExt = Tables<"deals"> & {
+  accepted_at?: string | null;
+  closed_at?: string | null;
+  delivered_at?: string | null;
+  delivery_confirmed_at?: string | null;
+  payment_status?: string | null;
+  pickup_point_address?: string | null;
+  pickup_point_set_at?: string | null;
   sender_accepted_at?: string | null;
   traveler_accepted_at?: string | null;
-  delivery_confirmed_at?: string | null;
-  payment_status?: string;
 };
 
+type ParcelExt = Tables<"parcel_requests"> & {
+  delivery_point_address?: string | null;
+  delivery_point_type?: string | null;
+};
+
+type DeliveryCodeIssueResponse = {
+  code: string;
+  code_last4: string;
+};
+
+const DELIVERY_POINT_TYPE_LABEL: Record<string, string> = {
+  airport: "Aéroport",
+  bus_station: "Gare routière",
+  delivery_office: "Bureau de livraison",
+  public_place: "Lieu public",
+  train_station: "Gare ferroviaire",
+};
+
+function mapDeliveryPointType(value: string | null | undefined): string {
+  if (!value) return "Non défini";
+  return DELIVERY_POINT_TYPE_LABEL[value] ?? value;
+}
+
 export default function DealDetail() {
-  const { dealId } = useParams<{ dealId: string }>();
+  const { dealId: dealIdParam, id: dealIdAlias } = useParams<{ dealId?: string; id?: string }>();
+  const dealId = dealIdParam ?? dealIdAlias;
+
   const navigate = useNavigate();
+
   const [deal, setDeal] = useState<DealExt | null>(null);
   const [trip, setTrip] = useState<Tables<"trips"> | null>(null);
-  const [parcel, setParcel] = useState<Tables<"parcel_requests"> | null>(null);
+  const [parcel, setParcel] = useState<ParcelExt | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [senderPhone, setSenderPhone] = useState<string>("");
   const [travelerPhone, setTravelerPhone] = useState<string>("");
   const [senderCode, setSenderCode] = useState<string>("");
+  const [senderCodeHint, setSenderCodeHint] = useState<string>("");
   const [deliveryCodeInput, setDeliveryCodeInput] = useState("");
+  const [pickupPointAddress, setPickupPointAddress] = useState("");
   const [contentOk, setContentOk] = useState(false);
   const [sizeOk, setSizeOk] = useState(false);
   const [pickupProof, setPickupProof] = useState<File | null>(null);
   const [safetyOpen, setSafetyOpen] = useState(false);
 
-  const isMutuallyAccepted = deal?.status === "mutually_accepted" || deal?.status === "picked_up" || deal?.status === "delivered_confirmed";
+  const normalizedStatus = normalizeDealStatus(deal?.status ?? "");
+  const canChat = isChatUnlocked(normalizedStatus);
+  const mutualOrLater = isMutuallyAcceptedOrLater(normalizedStatus);
+  const closed = isDealClosed(normalizedStatus);
 
   const role = useMemo(() => {
     if (!deal || !myUserId) return "unknown";
@@ -42,6 +85,10 @@ export default function DealDetail() {
     return "unknown";
   }, [deal, myUserId]);
 
+  const canAccept = ["proposed", "accepted_by_sender", "accepted_by_traveler"].includes(normalizedStatus);
+  const canTravelerConfirmPickup = role === "traveler" && normalizedStatus === "mutually_accepted";
+  const canTravelerConfirmDelivery = role === "traveler" && normalizedStatus === "pickup_confirmed";
+
   const counterpartyUserId = useMemo(() => {
     if (!deal) return "";
     if (role === "sender") return deal.traveler_user_id;
@@ -49,56 +96,140 @@ export default function DealDetail() {
     return "";
   }, [deal, role]);
 
-  const load = async () => {
+  const codeStorageKey = dealId ? `maak_delivery_code_${dealId}` : "";
+
+  const loadDeal = async () => {
     if (!dealId) return;
 
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData.user;
+    await syncMarketplaceExpirations();
+
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData.user;
     setMyUserId(user?.id ?? null);
 
-    const { data: d } = await supabase.from("deals").select("*").eq("id", dealId).maybeSingle();
-    const dealData = d as DealExt | null;
+    const { data: dealDataRaw } = await supabase.from("deals").select("*").eq("id", dealId).maybeSingle();
+    const dealData = dealDataRaw as DealExt | null;
     setDeal(dealData);
 
-    if (!dealData) return;
+    if (!dealData) {
+      return;
+    }
 
-    const [tripRes, parcelRes, senderProfileRes, travelerProfileRes] = await Promise.all([
+    setPickupPointAddress(dealData.pickup_point_address ?? "");
+
+    const [tripRes, parcelRes] = await Promise.all([
       dealData.trip_id ? supabase.from("trips").select("*").eq("id", dealData.trip_id).maybeSingle() : Promise.resolve({ data: null }),
-      dealData.parcel_request_id ? supabase.from("parcel_requests").select("*").eq("id", dealData.parcel_request_id).maybeSingle() : Promise.resolve({ data: null }),
-      supabase.from("profiles").select("phone").eq("user_id", dealData.owner_user_id).maybeSingle(),
-      supabase.from("profiles").select("phone").eq("user_id", dealData.traveler_user_id).maybeSingle(),
+      dealData.parcel_request_id
+        ? supabase.from("parcel_requests").select("*").eq("id", dealData.parcel_request_id).maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
     setTrip((tripRes as { data: Tables<"trips"> | null }).data ?? null);
-    setParcel((parcelRes as { data: Tables<"parcel_requests"> | null }).data ?? null);
-    setSenderPhone((senderProfileRes.data as { phone?: string } | null)?.phone ?? "");
-    setTravelerPhone((travelerProfileRes.data as { phone?: string } | null)?.phone ?? "");
+    setParcel((parcelRes as { data: ParcelExt | null }).data ?? null);
+
+    if (isChatUnlocked(dealData.status)) {
+      const [senderContact, travelerContact] = await Promise.all([
+        supabase.from("private_contacts" as never).select("phone").eq("user_id", dealData.owner_user_id).maybeSingle(),
+        supabase.from("private_contacts" as never).select("phone").eq("user_id", dealData.traveler_user_id).maybeSingle(),
+      ]);
+
+      setSenderPhone((senderContact.data as { phone?: string } | null)?.phone ?? "");
+      setTravelerPhone((travelerContact.data as { phone?: string } | null)?.phone ?? "");
+    } else {
+      setSenderPhone("");
+      setTravelerPhone("");
+    }
 
     if (user?.id === dealData.owner_user_id) {
-      const { data: deliveryCode } = await supabase.from("delivery_codes" as never).select("sender_visible_code").eq("deal_id", dealId).maybeSingle();
-      setSenderCode((deliveryCode as { sender_visible_code?: string } | null)?.sender_visible_code ?? "");
+      const storedCode = localStorage.getItem(codeStorageKey);
+      setSenderCode(storedCode ?? "");
+
+      const { data: deliveryCodeData } = await supabase
+        .from("delivery_codes" as never)
+        .select("code_last4")
+        .eq("deal_id", dealId)
+        .maybeSingle();
+
+      setSenderCodeHint((deliveryCodeData as { code_last4?: string } | null)?.code_last4 ?? "");
+    } else {
+      setSenderCode("");
+      setSenderCodeHint("");
     }
   };
 
   useEffect(() => {
-    load();
+    void loadDeal();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dealId]);
 
-  const handleAccept = async () => {
+  const issueOwnerCode = async (silent = false) => {
     if (!dealId) return;
-    const { error } = await supabase.rpc("accept_deal", { p_deal_id: dealId });
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Deal accepté");
-      await load();
+
+    const { data, error } = await supabase.rpc("issue_delivery_code_for_owner" as never, {
+      p_deal_id: dealId,
+    } as never);
+
+    if (error) {
+      if (!silent) toast.error(error.message);
+      return;
+    }
+
+    const row = (Array.isArray(data) ? data[0] : data) as DeliveryCodeIssueResponse | undefined;
+    const code = row?.code;
+
+    if (!code) {
+      if (!silent) toast.error("Code non disponible.");
+      return;
+    }
+
+    localStorage.setItem(codeStorageKey, code);
+    setSenderCode(code);
+    setSenderCodeHint(row.code_last4 ?? "");
+    if (!silent) {
+      toast.success("Code secret généré");
     }
   };
 
-  const handlePickup = async () => {
-    if (!dealId) {
+  useEffect(() => {
+    if (!dealId || role !== "sender" || !mutualOrLater || closed) return;
+
+    const existing = localStorage.getItem(codeStorageKey);
+    if (existing) {
+      setSenderCode(existing);
       return;
     }
+
+    void issueOwnerCode(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealId, role, mutualOrLater, closed, codeStorageKey]);
+
+  const handleAccept = async () => {
+    if (!dealId) return;
+
+    if (role === "traveler" && !pickupPointAddress.trim()) {
+      toast.error("Point de pickup requis", {
+        description: "Le voyageur doit définir le point A avant acceptation.",
+      });
+      return;
+    }
+
+    const payload: Record<string, unknown> = { p_deal_id: dealId };
+    if (role === "traveler") {
+      payload.p_pickup_point_address = pickupPointAddress.trim();
+    }
+
+    const { error } = await supabase.rpc("accept_deal" as never, payload as never);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Acceptation enregistrée");
+    await loadDeal();
+  };
+
+  const handlePickup = async () => {
+    if (!dealId) return;
 
     let proofReference = "fonction-a-venir://pickup-proof";
 
@@ -109,49 +240,65 @@ export default function DealDetail() {
         .upload(filePath, pickupProof, { upsert: false });
 
       if (uploadError) {
-        toast.info("Upload photo indisponible, preuve marquée: fonction à venir.");
+        toast.info("Upload indisponible, preuve marquée comme fonction à venir.");
       } else {
         proofReference = `storage://handoff_proofs/${filePath}`;
       }
-    } else {
-      toast.info("Photo optionnelle non fournie: preuve marquée fonction à venir.");
     }
 
-    const { data: ok, error } = await supabase.rpc("confirm_pickup", {
-      p_deal_id: dealId,
+    const { data, error } = await supabase.rpc("confirm_pickup" as never, {
       p_content_ok: contentOk,
-      p_size_ok: sizeOk,
+      p_deal_id: dealId,
       p_photo_url: proofReference,
-    });
+      p_size_ok: sizeOk,
+    } as never);
 
-    if (error || !ok) toast.error(error?.message ?? "Pickup impossible");
-    else {
-      toast.success("Prise en charge confirmée");
-      await load();
+    if (error || !data) {
+      toast.error(error?.message ?? "Confirmation pickup impossible");
+      return;
     }
+
+    toast.success("Pickup confirmé");
+    await loadDeal();
   };
 
   const handleVerifyDeliveryCode = async () => {
     if (!dealId || !deliveryCodeInput.trim()) return;
 
-    const { data, error } = await supabase.rpc("verify_delivery_code", { p_deal_id: dealId, p_code: deliveryCodeInput.trim() });
+    const { data, error } = await supabase.rpc("verify_delivery_code" as never, {
+      p_code: deliveryCodeInput.trim().toUpperCase(),
+      p_deal_id: dealId,
+    } as never);
+
     if (error) {
       toast.error(error.message);
       return;
     }
 
-    const result = (data as { success: boolean; message: string }[] | null)?.[0];
-    if (result?.success) {
-      toast.success(result.message);
-      await load();
-    } else {
-      toast.error(result?.message ?? "Code incorrect. Livraison non confirmée.");
+    const result = (data as { message: string; success: boolean }[] | null)?.[0];
+
+    if (!result?.success) {
+      toast.error(result?.message ?? "Code incorrect");
+      return;
     }
+
+    localStorage.removeItem(codeStorageKey);
+    toast.success(result.message);
+    await loadDeal();
   };
 
   if (!deal) {
-    return <div className="mobile-page"><p className="text-sm text-muted-foreground">Chargement...</p></div>;
+    return (
+      <div className="mobile-page">
+        <p className="text-sm text-muted-foreground">Chargement...</p>
+      </div>
+    );
   }
+
+  const hasMutualAcceptance = ["mutually_accepted", "pickup_confirmed", "delivered", "closed"].includes(normalizedStatus);
+  const hasPickupConfirmed = ["pickup_confirmed", "delivered", "closed"].includes(normalizedStatus);
+  const hasDelivered = Boolean(deal.delivered_at || ["delivered", "closed"].includes(normalizedStatus));
+  const hasClosed = normalizedStatus === "closed" || Boolean(deal.closed_at);
 
   return (
     <div className="mobile-page space-y-4">
@@ -162,26 +309,41 @@ export default function DealDetail() {
 
       <Card className="maak-card p-4 space-y-2">
         <p className="text-sm font-semibold">{trip?.origin_wilaya} → {trip?.destination_wilaya}</p>
-        <p className="text-xs text-muted-foreground">Statut: {deal.status}</p>
-        <p className="text-xs text-muted-foreground">Colis: {parcel?.category} • {parcel?.size_weight ?? "taille N/A"} • {parcel?.reward_dzd ?? 0} DZD</p>
+        <p className="text-xs text-muted-foreground">Statut: {normalizedStatus}</p>
+        <p className="text-xs text-muted-foreground">
+          Colis: {parcel?.category} • {parcel?.size_weight ?? "taille N/A"} • {parcel?.reward_dzd ?? 0} DZD
+        </p>
       </Card>
 
+      <Card className="maak-card p-4 space-y-2">
+        <p className="text-sm font-semibold">Points de remise</p>
+        <p className="text-xs text-muted-foreground">
+          Point A (pickup voyageur): {deal.pickup_point_address || "En attente de définition"}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Point B (livraison expéditeur): {parcel?.delivery_point_address || "Non défini"}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Type point B: {mapDeliveryPointType(parcel?.delivery_point_type)}
+        </p>
+      </Card>
 
       <Card className="maak-card p-4">
         <p className="text-sm font-semibold mb-2">Timeline du deal</p>
         <ul className="space-y-1 text-xs text-muted-foreground">
-          <li className={["proposed", "accepted_by_sender", "accepted_by_traveler", "mutually_accepted", "picked_up", "delivered_confirmed"].includes(deal.status) ? "text-foreground" : ""}>• Proposé</li>
-          <li className={["accepted_by_sender", "accepted_by_traveler", "mutually_accepted", "picked_up", "delivered_confirmed"].includes(deal.status) ? "text-foreground" : ""}>• Acceptation en cours</li>
-          <li className={["mutually_accepted", "picked_up", "delivered_confirmed"].includes(deal.status) ? "text-foreground" : ""}>• Accepté par les deux parties</li>
-          <li className={["picked_up", "delivered_confirmed"].includes(deal.status) ? "text-foreground" : ""}>• Pris en charge</li>
-          <li className={deal.status === "delivered_confirmed" ? "text-foreground" : ""}>• Livré et confirmé</li>
-          <li className={deal.status === "cancelled" ? "text-destructive font-semibold" : ""}>• Annulé</li>
+          <li className="text-foreground">• Proposé</li>
+          <li className={deal.sender_accepted_at ? "text-foreground" : ""}>• Accepté par l'expéditeur</li>
+          <li className={deal.traveler_accepted_at ? "text-foreground" : ""}>• Accepté par le voyageur</li>
+          <li className={hasMutualAcceptance ? "text-foreground" : ""}>• Mutuellement accepté</li>
+          <li className={hasPickupConfirmed ? "text-foreground" : ""}>• Pickup confirmé</li>
+          <li className={hasDelivered ? "text-foreground" : ""}>• Livré</li>
+          <li className={hasClosed ? "text-foreground" : ""}>• Clôturé</li>
         </ul>
       </Card>
 
       <Card className="maak-card p-4">
         <p className="text-sm font-semibold mb-2">Confidentialité progressive</p>
-        {isMutuallyAccepted ? (
+        {canChat ? (
           <div className="space-y-2">
             <p className="text-sm">Contact expéditeur: {senderPhone || "N/A"}</p>
             <p className="text-sm">Contact transporteur: {travelerPhone || "N/A"}</p>
@@ -190,7 +352,7 @@ export default function DealDetail() {
             </Button>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Contact disponible après acceptation des deux parties.</p>
+          <p className="text-sm text-muted-foreground">Contact et chat verrouillés avant acceptation mutuelle.</p>
         )}
       </Card>
 
@@ -198,16 +360,12 @@ export default function DealDetail() {
         <Card className="maak-card p-4">
           <CollapsibleTrigger className="w-full flex items-center justify-between text-left">
             <span className="text-sm font-semibold">Sécurité</span>
-            {safetyOpen ? (
-              <ChevronUp className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            )}
+            {safetyOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-3 space-y-2">
             <ul className="space-y-1.5 text-xs text-muted-foreground">
-              <li>Contact débloqué uniquement après acceptation</li>
-              <li>Vérifiez le colis à la remise</li>
+              <li>Le contact direct reste masqué avant consentement bilatéral</li>
+              <li>Le code secret est exigé pour clôturer la livraison</li>
             </ul>
             <div className="flex flex-col gap-1.5 text-sm">
               <Link className="text-primary font-medium hover:underline" to="/processus/remise">
@@ -221,41 +379,80 @@ export default function DealDetail() {
         </Card>
       </Collapsible>
 
-      {(deal.status === "proposed" || deal.status === "accepted_by_sender" || deal.status === "accepted_by_traveler") && (
-        <Button className="w-full maak-primary-btn" onClick={handleAccept}>Accepter</Button>
+      {canAccept && (
+        <Card className="maak-card p-4 space-y-3">
+          <p className="text-sm font-semibold">Acceptation bilatérale</p>
+          {role === "traveler" && (
+            <Input
+              placeholder="Point A (pickup) défini par le voyageur"
+              value={pickupPointAddress}
+              onChange={(event) => setPickupPointAddress(event.target.value)}
+            />
+          )}
+          <Button className="w-full maak-primary-btn" onClick={handleAccept}>
+            Accepter ce deal
+          </Button>
+        </Card>
       )}
 
-      {role === "sender" && isMutuallyAccepted && (
-        <Card className="maak-card p-4">
+      {role === "sender" && mutualOrLater && !closed && (
+        <Card className="maak-card p-4 space-y-3">
           <p className="text-sm font-semibold">Code secret de livraison</p>
-          <p className="text-xs text-muted-foreground">Ne partagez ce code qu’au moment de la remise finale.</p>
-          <p className="mt-2 text-lg font-black tracking-wider">{senderCode || "En génération..."}</p>
+          <p className="text-xs text-muted-foreground">Visible uniquement à l'expéditeur. Ne pas partager avant la remise finale.</p>
+          <p className="text-lg font-black tracking-wider">{senderCode || "MAAK-XXXX-XX"}</p>
+          {senderCodeHint && !senderCode && (
+            <p className="text-xs text-muted-foreground">Derniers caractères enregistrés: {senderCodeHint}</p>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <Button onClick={() => void issueOwnerCode(false)} className="w-full" variant="outline">
+              {senderCode ? "Régénérer" : "Générer"}
+            </Button>
+            <Button
+              onClick={() => navigate(`/messages/${deal.id}`)}
+              className="w-full"
+              variant="outline"
+              disabled={!canChat}
+            >
+              Chat
+            </Button>
+          </div>
         </Card>
       )}
 
-      {role === "traveler" && deal.status === "mutually_accepted" && (
+      {canTravelerConfirmPickup && (
         <Card className="maak-card p-4 space-y-3">
-          <p className="text-sm font-semibold">Confirmer la prise en charge</p>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={contentOk} onChange={(e) => setContentOk(e.target.checked)} /> Contenu conforme</label>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sizeOk} onChange={(e) => setSizeOk(e.target.checked)} /> Dimensions/poids conformes</label>
-          <Input type="file" accept="image/*" onChange={(e) => setPickupProof(e.target.files?.[0] ?? null)} />
-          <p className="text-xs text-muted-foreground">Photo optionnelle. Si le stockage n'est pas configuré, la preuve est marquée "fonction à venir".</p>
-          <Button className="w-full" onClick={handlePickup} disabled={!contentOk || !sizeOk}>Confirmer la prise en charge</Button>
+          <p className="text-sm font-semibold">Confirmer le pickup</p>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={contentOk} onChange={(event) => setContentOk(event.target.checked)} /> Contenu conforme
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={sizeOk} onChange={(event) => setSizeOk(event.target.checked)} /> Taille/poids conformes
+          </label>
+          <Input type="file" accept="image/*" onChange={(event) => setPickupProof(event.target.files?.[0] ?? null)} />
+          <Button className="w-full" onClick={handlePickup} disabled={!contentOk || !sizeOk}>
+            Confirmer pickup
+          </Button>
         </Card>
       )}
 
-      {role === "traveler" && (deal.status === "mutually_accepted" || deal.status === "picked_up") && (
+      {canTravelerConfirmDelivery && (
         <Card className="maak-card p-4 space-y-3">
-          <p className="text-sm font-semibold">Confirmer la livraison</p>
-          <Input placeholder="MAAK-7842-XK" value={deliveryCodeInput} onChange={(e) => setDeliveryCodeInput(e.target.value.toUpperCase())} />
-          <Button className="w-full maak-primary-btn" onClick={handleVerifyDeliveryCode}>Valider le code</Button>
+          <p className="text-sm font-semibold">Valider la livraison</p>
+          <Input
+            placeholder="MAAK-1234-AB"
+            value={deliveryCodeInput}
+            onChange={(event) => setDeliveryCodeInput(event.target.value.toUpperCase())}
+          />
+          <Button className="w-full maak-primary-btn" onClick={handleVerifyDeliveryCode}>
+            Vérifier le code
+          </Button>
         </Card>
       )}
 
-      {deal.status === "delivered_confirmed" && (
+      {closed && (
         <Card className="maak-card-soft p-4 flex items-center gap-2">
           <CheckCircle2 className="h-5 w-5 text-primary" />
-          <p className="text-sm font-semibold">Livraison confirmée ✅</p>
+          <p className="text-sm font-semibold">Deal clôturé ✅</p>
         </Card>
       )}
 
@@ -272,8 +469,10 @@ export default function DealDetail() {
         >
           <ShieldAlert className="h-4 w-4 mr-2" /> Signaler
         </Button>
-        {deal.status === "delivered_confirmed" && (
-          <Button variant="outline" className="w-full" onClick={() => navigate("/profile/ratings")}>Laisser un avis</Button>
+        {closed && (
+          <Button variant="outline" className="w-full" onClick={() => navigate("/profile/ratings")}>
+            Laisser un avis
+          </Button>
         )}
       </div>
     </div>

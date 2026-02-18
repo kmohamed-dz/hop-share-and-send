@@ -37,13 +37,24 @@ export type Database = {
       }
       deals: {
         Row: {
+          accepted_at: string | null
+          closed_at: string | null
           created_at: string
+          delivered_at: string | null
+          delivery_confirmed_at: string | null
           id: string
           owner_confirmed_delivery: boolean | null
           owner_confirmed_pickup: boolean | null
           owner_user_id: string
           parcel_request_id: string | null
+          payment_status: string
+          pickup_confirmed_at: string | null
+          pickup_point_address: string | null
+          pickup_point_set_at: string | null
+          sender_accepted_at: string | null
           status: string
+          status_updated_at: string
+          traveler_accepted_at: string | null
           traveler_confirmed_delivery: boolean | null
           traveler_confirmed_pickup: boolean | null
           traveler_user_id: string
@@ -51,13 +62,24 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepted_at?: string | null
+          closed_at?: string | null
           created_at?: string
+          delivered_at?: string | null
+          delivery_confirmed_at?: string | null
           id?: string
           owner_confirmed_delivery?: boolean | null
           owner_confirmed_pickup?: boolean | null
           owner_user_id: string
           parcel_request_id?: string | null
+          payment_status?: string
+          pickup_confirmed_at?: string | null
+          pickup_point_address?: string | null
+          pickup_point_set_at?: string | null
+          sender_accepted_at?: string | null
           status?: string
+          status_updated_at?: string
+          traveler_accepted_at?: string | null
           traveler_confirmed_delivery?: boolean | null
           traveler_confirmed_pickup?: boolean | null
           traveler_user_id: string
@@ -65,13 +87,24 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepted_at?: string | null
+          closed_at?: string | null
           created_at?: string
+          delivered_at?: string | null
+          delivery_confirmed_at?: string | null
           id?: string
           owner_confirmed_delivery?: boolean | null
           owner_confirmed_pickup?: boolean | null
           owner_user_id?: string
           parcel_request_id?: string | null
+          payment_status?: string
+          pickup_confirmed_at?: string | null
+          pickup_point_address?: string | null
+          pickup_point_set_at?: string | null
+          sender_accepted_at?: string | null
           status?: string
+          status_updated_at?: string
+          traveler_accepted_at?: string | null
           traveler_confirmed_delivery?: boolean | null
           traveler_confirmed_pickup?: boolean | null
           traveler_user_id?: string
@@ -133,6 +166,8 @@ export type Database = {
           created_at: string
           date_window_end: string
           date_window_start: string
+          delivery_point_address: string | null
+          delivery_point_type: string | null
           destination_wilaya: string
           forbidden_items_acknowledged: boolean | null
           id: string
@@ -150,6 +185,8 @@ export type Database = {
           created_at?: string
           date_window_end: string
           date_window_start: string
+          delivery_point_address?: string | null
+          delivery_point_type?: string | null
           destination_wilaya: string
           forbidden_items_acknowledged?: boolean | null
           id?: string
@@ -167,6 +204,8 @@ export type Database = {
           created_at?: string
           date_window_end?: string
           date_window_start?: string
+          delivery_point_address?: string | null
+          delivery_point_type?: string | null
           destination_wilaya?: string
           forbidden_items_acknowledged?: boolean | null
           id?: string
@@ -185,41 +224,56 @@ export type Database = {
         Row: {
           created_at: string
           deliveries_count: number | null
+          full_name: string | null
           id: string
           name: string
+          national_id: string | null
           phone: string
           photo_url: string | null
+          preferred_language: string
+          profile_complete: boolean
           rating_avg: number | null
           rating_count: number | null
           role_preference: string
           updated_at: string
           user_id: string
+          wilaya: string | null
         }
         Insert: {
           created_at?: string
           deliveries_count?: number | null
+          full_name?: string | null
           id?: string
           name: string
+          national_id?: string | null
           phone?: string
           photo_url?: string | null
+          preferred_language?: string
+          profile_complete?: boolean
           rating_avg?: number | null
           rating_count?: number | null
           role_preference?: string
           updated_at?: string
           user_id: string
+          wilaya?: string | null
         }
         Update: {
           created_at?: string
           deliveries_count?: number | null
+          full_name?: string | null
           id?: string
           name?: string
+          national_id?: string | null
           phone?: string
           photo_url?: string | null
+          preferred_language?: string
+          profile_complete?: boolean
           rating_avg?: number | null
           rating_count?: number | null
           role_preference?: string
           updated_at?: string
           user_id?: string
+          wilaya?: string | null
         }
         Relationships: []
       }

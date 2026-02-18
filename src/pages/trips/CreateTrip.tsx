@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { WilayaSelect } from "@/components/WilayaSelect";
 import { PARCEL_CATEGORIES } from "@/data/wilayas";
 import { supabase } from "@/integrations/supabase/client";
+import { currentUserHasOpenDeal, syncMarketplaceExpirations } from "@/lib/marketplace";
 import { useToast } from "@/hooks/use-toast";
 
 export default function CreateTrip() {
@@ -35,6 +36,19 @@ export default function CreateTrip() {
     }
 
     setLoading(true);
+    await syncMarketplaceExpirations();
+
+    const hasOpenDeal = await currentUserHasOpenDeal();
+    if (hasOpenDeal) {
+      toast({
+        title: "Action bloquée",
+        description: "Vous devez clôturer votre deal actif avant de créer un nouveau trajet.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast({ title: "Non connecté", description: "Veuillez vous connecter.", variant: "destructive" });

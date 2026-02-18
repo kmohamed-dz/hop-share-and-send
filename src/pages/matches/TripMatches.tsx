@@ -1,21 +1,28 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ChevronDown, ChevronUp, Info, Package, Clock, CheckCircle2, XCircle, Zap } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Clock, Info, Package, Zap } from "lucide-react";
 
+import { PARCEL_CATEGORIES } from "@/data/wilayas";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { syncMarketplaceExpirations } from "@/lib/marketplace";
 import { computeTripParcelScore, type MatchScore } from "@/lib/matching";
-import { PARCEL_CATEGORIES } from "@/data/wilayas";
 import { toast } from "sonner";
 
 type ParcelWithScore = Tables<"parcel_requests"> & { score: MatchScore };
 
+type ProfilePublicRow = {
+  rating_avg: number | null;
+  user_id: string;
+};
+
 export default function TripMatches() {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
+
   const [trip, setTrip] = useState<Tables<"trips"> | null>(null);
   const [matches, setMatches] = useState<ParcelWithScore[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,47 +31,78 @@ export default function TripMatches() {
 
   useEffect(() => {
     if (!tripId) return;
-    Promise.all([
-      supabase.from("trips").select("*").eq("id", tripId).maybeSingle(),
-      supabase.from("parcel_requests").select("*").eq("status", "active"),
-    ]).then(([tripRes, parcelsRes]) => {
-      const t = tripRes.data;
-      setTrip(t);
-      if (t && parcelsRes.data) {
-        const scored = parcelsRes.data
-          .map((p) => ({ ...p, score: computeTripParcelScore(t, p) }))
-          .filter((p) => p.score.total > 0)
-          .sort((a, b) => b.score.total - a.score.total);
-        setMatches(scored);
+
+    void (async () => {
+      setLoading(true);
+      await syncMarketplaceExpirations();
+      const nowIso = new Date().toISOString();
+
+      const [tripRes, parcelsRes] = await Promise.all([
+        supabase.from("trips").select("*").eq("id", tripId).maybeSingle(),
+        supabase.from("parcel_requests").select("*").eq("status", "active").gte("date_window_end", nowIso),
+      ]);
+
+      const tripData = tripRes.data;
+      const parcelsData = parcelsRes.data ?? [];
+      setTrip(tripData ?? null);
+
+      if (!tripData || parcelsData.length === 0) {
+        setMatches([]);
+        setLoading(false);
+        return;
       }
+
+      const ownerIds = Array.from(new Set(parcelsData.map((entry) => entry.user_id)));
+      const ratingsByUser = new Map<string, number>();
+
+      if (ownerIds.length > 0) {
+        const { data: profileRows } = await supabase
+          .from("profile_public" as never)
+          .select("user_id,rating_avg")
+          .in("user_id", ownerIds);
+
+        ((profileRows as ProfilePublicRow[] | null) ?? []).forEach((row) => {
+          ratingsByUser.set(row.user_id, row.rating_avg ?? 3);
+        });
+      }
+
+      const scored = parcelsData
+        .map((parcel) => ({
+          ...parcel,
+          score: computeTripParcelScore(tripData, parcel, {
+            reputationAvg: ratingsByUser.get(parcel.user_id) ?? 3,
+          }),
+        }))
+        .filter((parcel) => parcel.score.total > 0)
+        .sort((a, b) => b.score.total - a.score.total);
+
+      setMatches(scored);
       setLoading(false);
-    });
+    })();
   }, [tripId]);
 
   const proposeDeal = async (parcel: Tables<"parcel_requests">) => {
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user || !tripId) return;
+    if (!tripId) return;
 
-    const existing = await supabase.from("deals").select("id").eq("trip_id", tripId).eq("parcel_request_id", parcel.id).maybeSingle();
-    if (existing.data?.id) {
-      navigate(`/deals/${existing.data.id}`);
+    const { data, error } = await supabase.rpc("propose_deal" as never, {
+      p_parcel_request_id: parcel.id,
+      p_trip_id: tripId,
+    } as never);
+
+    if (error) {
+      toast.error(error.message);
       return;
     }
 
-    const { data, error } = await supabase
-      .from("deals")
-      .insert({
-        trip_id: tripId,
-        parcel_request_id: parcel.id,
-        traveler_user_id: auth.user.id,
-        owner_user_id: parcel.user_id,
-        status: "proposed",
-      })
-      .select("id")
-      .single();
+    const payload = data as { id?: string } | { id?: string }[] | null;
+    const dealId = Array.isArray(payload) ? payload[0]?.id : payload?.id;
 
-    if (error) toast.error(error.message);
-    else navigate(`/deals/${data.id}`);
+    if (!dealId) {
+      toast.error("Impossible de créer le deal.");
+      return;
+    }
+
+    navigate(`/deals/${dealId}`);
   };
 
   return (
@@ -74,12 +112,12 @@ export default function TripMatches() {
           <button onClick={() => navigate(-1)} className="p-1"><ArrowLeft className="h-5 w-5" /></button>
           <h1 className="maak-section-title">Colis compatibles</h1>
         </div>
-        <button onClick={() => setShowInfo((v) => !v)} className="p-1"><Info className="h-5 w-5 text-primary" /></button>
+        <button onClick={() => setShowInfo((value) => !value)} className="p-1"><Info className="h-5 w-5 text-primary" /></button>
       </div>
 
       {showInfo && (
         <Card className="maak-card-soft p-3 mb-3 text-sm text-muted-foreground">
-          MAAK propose automatiquement les meilleurs matchs selon le départ, l’arrivée, le chevauchement des dates et la compatibilité catégorie/capacité.
+          Le score inclut départ, arrivée, capacité, réputation et proximité de date. La date reste flexible.
         </Card>
       )}
 
@@ -96,16 +134,12 @@ export default function TripMatches() {
         <Card className="maak-card p-3 mb-4">
           <CollapsibleTrigger className="w-full flex items-center justify-between text-left">
             <span className="text-sm font-semibold">Sécurité</span>
-            {safetyOpen ? (
-              <ChevronUp className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            )}
+            {safetyOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-2 space-y-2">
             <ul className="space-y-1.5 text-xs text-muted-foreground">
-              <li>Contact débloqué uniquement après acceptation</li>
-              <li>Vérifiez le colis à la remise</li>
+              <li>Contact et chat déverrouillés uniquement après acceptation mutuelle</li>
+              <li>Code secret obligatoire pour clôturer la livraison</li>
             </ul>
             <div className="flex flex-col gap-1 text-sm">
               <Link className="text-primary font-medium hover:underline" to="/processus/remise">
@@ -125,35 +159,46 @@ export default function TripMatches() {
         <p className="text-center text-sm text-muted-foreground py-12">Aucun colis compatible trouvé</p>
       ) : (
         <div className="space-y-3">
-          {matches.map((m) => {
-            const cat = PARCEL_CATEGORIES.find((c) => c.id === m.category);
+          {matches.map((parcel) => {
+            const category = PARCEL_CATEGORIES.find((entry) => entry.id === parcel.category);
+
             return (
-              <Card key={m.id} className="maak-card p-3.5">
-                <div className="flex items-center justify-between mb-2">
+              <Card key={parcel.id} className="maak-card p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-secondary" />
-                    <span className="font-semibold text-sm">{m.origin_wilaya} → {m.destination_wilaya}</span>
+                    <span className="font-semibold text-sm">{parcel.origin_wilaya} → {parcel.destination_wilaya}</span>
                   </div>
                   <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10">
                     <Zap className="h-3 w-3 text-primary" />
-                    <span className="text-xs font-bold text-primary">{m.score.total}/100</span>
+                    <span className="text-xs font-bold text-primary">{parcel.score.total}/100</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
-                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(m.date_window_start).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} - {new Date(m.date_window_end).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
-                  {cat && <span>{cat.label}</span>}
-                  {m.reward_dzd && m.reward_dzd > 0 && <span className="font-semibold text-primary">{m.reward_dzd} DZD</span>}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <span>
+                    {new Date(parcel.date_window_start).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} - {new Date(parcel.date_window_end).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                  </span>
+                  {category && <span>{category.label}</span>}
                 </div>
 
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  <ScoreBadge ok={m.score.originMatch} label="Origine" />
-                  <ScoreBadge ok={m.score.destinationMatch} label="Destination" />
-                  <ScoreBadge ok={m.score.timeMatch} label="Date" />
-                  <ScoreBadge ok={m.score.categoryMatch} label="Catégorie" />
+                <div className="flex flex-wrap gap-1.5">
+                  <ScoreBadge ok={parcel.score.originMatch} label="Départ" />
+                  <ScoreBadge ok={parcel.score.destinationMatch} label="Arrivée" />
+                  <ScoreBadge ok={parcel.score.categoryMatch} label="Catégorie" />
+                  {parcel.score.dateFlexible ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                      Date flexible
+                    </span>
+                  ) : (
+                    <ScoreBadge ok={true} label="Date alignée" />
+                  )}
                 </div>
 
-                <Button className="w-full" onClick={() => proposeDeal(m)}>Proposer ce match</Button>
+                <Button className="w-full" onClick={() => proposeDeal(parcel)}>
+                  Proposer ce match
+                </Button>
               </Card>
             );
           })}
@@ -166,7 +211,6 @@ export default function TripMatches() {
 function ScoreBadge({ ok, label }: { ok: boolean; label: string }) {
   return (
     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${ok ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
-      {ok ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
       {label}
     </span>
   );

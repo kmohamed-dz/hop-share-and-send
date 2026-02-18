@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Settings as SettingsIcon, Shield, Workflow } from "lucide-react";
 
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Card } from "@/components/ui/card";
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { language, setLanguage } = useLanguage();
   return (
     <div className="mobile-page space-y-4">
       <div className="mobile-header">
@@ -14,6 +16,28 @@ export default function Settings() {
       <Card className="maak-card p-4 flex items-center gap-3">
         <SettingsIcon className="h-5 w-5 text-primary" />
         <p className="text-sm">Préférences de notification, confidentialité et compte (à venir).</p>
+      </Card>
+
+      <Card className="maak-card p-4 space-y-3">
+        <p className="text-sm font-semibold">Langue / اللغة</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => {
+              void setLanguage("fr");
+            }}
+            className={`rounded-xl border px-3 py-2 text-sm font-semibold ${language === "fr" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
+          >
+            Français
+          </button>
+          <button
+            onClick={() => {
+              void setLanguage("ar");
+            }}
+            className={`rounded-xl border px-3 py-2 text-sm font-semibold ${language === "ar" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
+          >
+            العربية
+          </button>
+        </div>
       </Card>
 
       <button

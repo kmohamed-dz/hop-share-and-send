@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { WilayaSelect } from "@/components/WilayaSelect";
 import { PARCEL_CATEGORIES } from "@/data/wilayas";
 import { supabase } from "@/integrations/supabase/client";
+import { currentUserHasOpenDeal, syncMarketplaceExpirations } from "@/lib/marketplace";
 import { useToast } from "@/hooks/use-toast";
 
 const SIZE_OPTIONS = [
@@ -17,6 +18,14 @@ const SIZE_OPTIONS = [
   { value: "medium", label: "Moyen (2-5 kg)" },
   { value: "large", label: "Grand (5-15 kg)" },
   { value: "xlarge", label: "Très grand (> 15 kg)" },
+];
+
+const DELIVERY_POINT_TYPES = [
+  { value: "public_place", label: "Lieu public" },
+  { value: "delivery_office", label: "Bureau de livraison" },
+  { value: "airport", label: "Aéroport" },
+  { value: "train_station", label: "Gare ferroviaire" },
+  { value: "bus_station", label: "Gare routière" },
 ];
 
 export default function CreateParcel() {
@@ -33,11 +42,21 @@ export default function CreateParcel() {
   const [reward, setReward] = useState("");
   const [contentDescription, setContentDescription] = useState("");
   const [notes, setNotes] = useState("");
+  const [deliveryPointAddress, setDeliveryPointAddress] = useState("");
+  const [deliveryPointType, setDeliveryPointType] = useState("");
   const [forbiddenAck, setForbiddenAck] = useState(false);
 
   const handleSubmit = async () => {
     if (!origin || !destination || !dateStart || !dateEnd || !category || !sizeWeight || !reward || !contentDescription.trim()) {
       toast({ title: "Champs requis", description: "Veuillez remplir tous les champs obligatoires.", variant: "destructive" });
+      return;
+    }
+    if (!deliveryPointAddress.trim() || !deliveryPointType) {
+      toast({
+        title: "Point de livraison requis",
+        description: "Ajoutez l'adresse et le type du point B (livraison).",
+        variant: "destructive",
+      });
       return;
     }
     if (!forbiddenAck) {
@@ -50,6 +69,19 @@ export default function CreateParcel() {
     }
 
     setLoading(true);
+    await syncMarketplaceExpirations();
+
+    const hasOpenDeal = await currentUserHasOpenDeal();
+    if (hasOpenDeal) {
+      toast({
+        title: "Action bloquée",
+        description: "Vous devez clôturer votre deal actif avant de publier un nouveau colis.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast({ title: "Non connecté", description: "Veuillez vous connecter.", variant: "destructive" });
@@ -69,6 +101,8 @@ export default function CreateParcel() {
       size_weight: sizeWeight || null,
       reward_dzd: reward ? parseInt(reward, 10) : 0,
       notes: mergedNotes || null,
+      delivery_point_address: deliveryPointAddress.trim(),
+      delivery_point_type: deliveryPointType,
       forbidden_items_acknowledged: true,
     });
 
@@ -145,6 +179,27 @@ export default function CreateParcel() {
             onChange={(e) => setReward(e.target.value)}
             min={0}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Point de livraison B *</Label>
+          <Input
+            placeholder="Adresse de remise (quartier, repère...)"
+            value={deliveryPointAddress}
+            onChange={(e) => setDeliveryPointAddress(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Type de point B *</Label>
+          <Select value={deliveryPointType} onValueChange={setDeliveryPointType}>
+            <SelectTrigger><SelectValue placeholder="Choisir un type" /></SelectTrigger>
+            <SelectContent>
+              {DELIVERY_POINT_TYPES.map((entry) => (
+                <SelectItem key={entry.value} value={entry.value}>{entry.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
 

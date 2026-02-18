@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { isChatUnlocked, syncMarketplaceExpirations } from "@/lib/marketplace";
 import { toast } from "sonner";
 
 export default function DealChat() {
@@ -16,16 +17,19 @@ export default function DealChat() {
   const [text, setText] = useState("");
   const [myId, setMyId] = useState<string | null>(null);
 
-  const canChat = useMemo(() => !!deal && ["mutually_accepted", "picked_up", "delivered_confirmed"].includes(deal.status), [deal]);
+  const canChat = useMemo(() => !!deal && isChatUnlocked(deal.status), [deal]);
 
   useEffect(() => {
     if (!dealId) return;
 
-    supabase.auth.getUser().then(({ data }) => setMyId(data.user?.id ?? null));
+    void (async () => {
+      await syncMarketplaceExpirations();
+      const { data } = await supabase.auth.getUser();
+      setMyId(data.user?.id ?? null);
 
-    supabase.from("deals").select("*").eq("id", dealId).maybeSingle().then(({ data }) => {
-      setDeal(data ?? null);
-    });
+      const { data: dealData } = await supabase.from("deals").select("*").eq("id", dealId).maybeSingle();
+      setDeal(dealData ?? null);
+    })();
 
     const loadMessages = () => {
       supabase.from("messages").select("*").eq("deal_id", dealId).order("created_at", { ascending: true }).then(({ data }) => {

@@ -4,6 +4,7 @@ import { ArrowLeft, Route, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { syncMarketplaceExpirations } from "@/lib/marketplace";
 
 export default function BrowseTrips() {
   const navigate = useNavigate();
@@ -11,10 +12,18 @@ export default function BrowseTrips() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("trips").select("*").eq("status", "active").order("departure_date", { ascending: true }).then(({ data }) => {
+    void (async () => {
+      await syncMarketplaceExpirations();
+      const nowIso = new Date().toISOString();
+      const { data } = await supabase
+        .from("trips")
+        .select("*")
+        .eq("status", "active")
+        .gte("departure_date", nowIso)
+        .order("departure_date", { ascending: true });
       setTrips(data ?? []);
       setLoading(false);
-    });
+    })();
   }, []);
 
   return (
