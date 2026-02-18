@@ -5,9 +5,18 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
-  
+  const env = loadEnv(mode, process.cwd(), "");
+  const supabaseUrl =
+    env.VITE_SUPABASE_URL || env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const supabaseAnonKey =
+    env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    env.VITE_SUPABASE_ANON_KEY ||
+    env.SUPABASE_ANON_KEY ||
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    "";
+
   return {
+    base: env.GITHUB_ACTIONS === "true" ? "/hop-share-and-send/" : "/",
     server: {
       host: "::",
       port: 8080,
@@ -22,10 +31,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
-      // Map PUBLISHABLE_KEY to ANON_KEY so the auto-generated client.ts works
-      "import.meta.env.VITE_SUPABASE_ANON_KEY": JSON.stringify(
-        env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY || ""
-      ),
+      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(supabaseUrl),
+      "import.meta.env.VITE_SUPABASE_ANON_KEY": JSON.stringify(supabaseAnonKey),
     },
   };
 });

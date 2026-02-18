@@ -3,19 +3,59 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
+import { syncMarketplaceExpirations } from "@/lib/marketplace";
 
 const ONBOARDING_FLAG_KEY = "maak_onboarding_done";
 const REDIRECT_AFTER_LOGIN_KEY = "maak_redirect_after_login";
+const PENDING_VERIFICATION_EMAIL_KEY = "maak_pending_verification_email";
+const ONBOARDING_ROLE_KEY = "maak_onboarding_role";
+
+const LOGIN_PATH = "/auth/login";
+const SIGNUP_PATH = "/auth/signup";
+const VERIFY_PATH = "/auth/verify";
+const PROFILE_SETUP_PATH = "/auth/profile-setup";
+const PROFILE_SETUP_ALIAS_PATH = "/profile/setup";
 
 function isOnboardingPath(pathname: string): boolean {
   return pathname.startsWith("/onboarding");
 }
 
-function isAuthPath(pathname: string): boolean {
-  return pathname.startsWith("/auth/login") || pathname.startsWith("/auth/profile-setup") || pathname.startsWith("/profile/setup");
+function isLoginPath(pathname: string): boolean {
+  return pathname.startsWith(LOGIN_PATH);
+}
+
+function isSignupPath(pathname: string): boolean {
+  return pathname.startsWith(SIGNUP_PATH);
+}
+
+function isVerifyPath(pathname: string): boolean {
+  return pathname.startsWith(VERIFY_PATH);
+}
+
+function isProfileSetupPath(pathname: string): boolean {
+  return pathname.startsWith(PROFILE_SETUP_PATH) || pathname.startsWith(PROFILE_SETUP_ALIAS_PATH);
+}
+
+function isPublicEntryPath(pathname: string): boolean {
+  return (
+    isOnboardingPath(pathname) ||
+    isLoginPath(pathname) ||
+    isSignupPath(pathname) ||
+    isVerifyPath(pathname) ||
+    isProfileSetupPath(pathname)
+  );
+}
+
+function isEmailVerified(session: Session | null): boolean {
+  const user = session?.user;
+  if (!user) return false;
+
+  return Boolean(user.email && user.email_confirmed_at);
 }
 
 function isProtectedPath(pathname: string): boolean {
+  if (isPublicEntryPath(pathname)) return false;
+
   return (
     pathname === "/" ||
     pathname.startsWith("/search") ||
@@ -34,17 +74,20 @@ function isProtectedPath(pathname: string): boolean {
   );
 }
 
-function isProfileComplete(profile: Record<string, unknown> | null, session: Session | null): boolean {
-  if (!profile || !session?.user) return false;
+function isProfileComplete(profile: Record<string, unknown> | null): boolean {
+  if (!profile) return false;
 
-  const fullName = (profile.full_name as string | undefined) ?? (profile.name as string | undefined);
-  const rolePref = (profile.role_pref as string | undefined) ?? (profile.role_preference as string | undefined);
+  const fullName = typeof profile.full_name === "string" ? profile.full_name.trim() : "";
+  const wilaya = typeof profile.wilaya === "string" ? profile.wilaya.trim() : "";
+  const nationalId = typeof profile.national_id === "string" ? profile.national_id.trim() : "";
+  const profileCompleteFlag = typeof profile.profile_complete === "boolean" ? profile.profile_complete : null;
+  const hasRequiredFields = Boolean(fullName) && Boolean(wilaya) && Boolean(nationalId);
 
-  const phoneFromAuth = session.user.phone;
-  const phoneConfirmedAt = (session.user as { phone_confirmed_at?: string | null }).phone_confirmed_at;
-  const phoneVerified = Boolean(phoneFromAuth) && (phoneConfirmedAt ? Boolean(phoneConfirmedAt) : true);
+  if (profileCompleteFlag === null) {
+    return hasRequiredFields;
+  }
 
-  return Boolean(fullName?.trim()) && Boolean(rolePref?.trim()) && phoneVerified;
+  return profileCompleteFlag && hasRequiredFields;
 }
 
 export function AuthGate() {
@@ -114,7 +157,13 @@ export function AuthGate() {
 
   const loading = sessionLoading || (Boolean(session?.user) && profileLoading);
 
-  const computedProfileComplete = useMemo(() => isProfileComplete(profile, session), [profile, session]);
+  const emailVerified = useMemo(() => isEmailVerified(session), [session]);
+  const computedProfileComplete = useMemo(() => isProfileComplete(profile), [profile]);
+
+  useEffect(() => {
+    if (!userId) return;
+    void syncMarketplaceExpirations();
+  }, [userId]);
 
   useEffect(() => {
     if (loading) return;
@@ -135,13 +184,13 @@ export function AuthGate() {
         return;
       }
 
-      if (isOnboardingPath(pathname) || pathname === "/auth/profile-setup" || pathname === "/profile/setup") {
-        navigate("/auth/login", { replace: true });
+      const pendingVerificationEmail = localStorage.getItem(PENDING_VERIFICATION_EMAIL_KEY);
+      if (isVerifyPath(pathname) && pendingVerificationEmail) {
         return;
       }
 
-      if (!isAuthPath(pathname) && !isOnboardingPath(pathname) && pathname !== "/auth/login") {
-        navigate("/auth/login", { replace: true });
+      if (!isLoginPath(pathname) && !isSignupPath(pathname)) {
+        navigate(LOGIN_PATH, { replace: true });
       }
       return;
     }
@@ -150,16 +199,27 @@ export function AuthGate() {
       localStorage.setItem(ONBOARDING_FLAG_KEY, "true");
     }
 
-    if (!computedProfileComplete) {
-      if (pathname !== "/auth/profile-setup") {
-        navigate("/auth/profile-setup", { replace: true });
+    if (!emailVerified) {
+      if (!isVerifyPath(pathname)) {
+        navigate(VERIFY_PATH, { replace: true });
       }
       return;
     }
 
-    if (isOnboardingPath(pathname) || pathname === "/auth/login" || pathname === "/auth/profile-setup" || pathname === "/profile/setup") {
+    localStorage.removeItem(PENDING_VERIFICATION_EMAIL_KEY);
+
+    if (!computedProfileComplete) {
+      if (!isProfileSetupPath(pathname)) {
+        navigate(PROFILE_SETUP_PATH, { replace: true });
+      }
+      return;
+    }
+
+    localStorage.removeItem(ONBOARDING_ROLE_KEY);
+
+    if (isPublicEntryPath(pathname)) {
       const redirectPath = localStorage.getItem(REDIRECT_AFTER_LOGIN_KEY);
-      if (redirectPath && redirectPath !== "/auth/login" && redirectPath !== "/auth/profile-setup") {
+      if (redirectPath && !isPublicEntryPath(redirectPath)) {
         localStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
         if (redirectPath !== pathname) {
           navigate(redirectPath, { replace: true });
@@ -167,16 +227,19 @@ export function AuthGate() {
         }
       }
 
+      localStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
       if (pathname !== "/") {
         navigate("/", { replace: true });
       }
     }
-  }, [computedProfileComplete, loading, location, navigate, session]);
+  }, [computedProfileComplete, emailVerified, loading, location, navigate, session]);
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-sm font-semibold text-muted-foreground">Chargement...</p>
+      <div className="flex min-h-screen w-full items-center justify-center bg-background">
+        <div className="rounded-2xl border border-border/70 bg-card px-8 py-6 shadow-sm">
+          <p className="text-sm font-semibold text-muted-foreground">Chargement...</p>
+        </div>
       </div>
     );
   }
@@ -184,4 +247,4 @@ export function AuthGate() {
   return <Outlet />;
 }
 
-export { ONBOARDING_FLAG_KEY, REDIRECT_AFTER_LOGIN_KEY };
+export { ONBOARDING_FLAG_KEY, REDIRECT_AFTER_LOGIN_KEY, PENDING_VERIFICATION_EMAIL_KEY, ONBOARDING_ROLE_KEY };

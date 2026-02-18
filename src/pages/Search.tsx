@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { syncMarketplaceExpirations } from "@/lib/marketplace";
 import { WILAYAS, PARCEL_CATEGORIES } from "@/data/wilayas";
 
 export default function SearchPage() {
@@ -32,6 +33,9 @@ export default function SearchPage() {
     ).map((w) => w.name);
 
     const fetchData = async () => {
+      await syncMarketplaceExpirations();
+      const nowIso = new Date().toISOString();
+
       if (tab === "trips") {
         if (matchingWilayas.length > 0) {
           // Search by origin or destination wilaya
@@ -39,6 +43,7 @@ export default function SearchPage() {
             .from("trips")
             .select("*")
             .eq("status", "active")
+            .gte("departure_date", nowIso)
             .or(
               matchingWilayas
                 .flatMap((w) => [
@@ -59,6 +64,7 @@ export default function SearchPage() {
             .from("parcel_requests")
             .select("*")
             .eq("status", "active")
+            .gte("date_window_end", nowIso)
             .or(
               matchingWilayas
                 .flatMap((w) => [

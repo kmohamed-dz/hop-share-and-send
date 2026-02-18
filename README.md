@@ -128,10 +128,14 @@ If you see `Le service SMS n'est pas encore configuré…`, Supabase Auth is not
      - **MessageBird**: Access Key and Originator.
    - Save.
 2. In **Authentication → URL Configuration**:
-   - Set **Site URL** to your production app URL.
-   - Add all required **Redirect URLs** (preview + production), including your Vercel and Lovable/v0 domains.
+   - Set **Site URL** to your production app URL, for example:
+     - `https://kmohamed-dz.github.io/hop-share-and-send/`
+   - Add all required **Redirect URLs** (preview + production), including localhost, GitHub Pages, and your Vercel/Lovable domains as applicable, for example:
+     - `http://localhost:8080/`
+     - `https://kmohamed-dz.github.io/hop-share-and-send/`
+   - Save.
 3. Real end-to-end verification:
-   - Test with `+213552623560`.
+   - Test with an Algerian number normalized to `+213` format (e.g. `+213552623560`).
    - Confirm SMS is actually received, then verify OTP in the app.
 
 > Note: phone OTP delivery is controlled by Supabase Auth provider configuration. App code cannot send SMS if Twilio/MessageBird is not configured.

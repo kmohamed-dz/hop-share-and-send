@@ -72,7 +72,7 @@ export default function Profile() {
         </div>
         <div>
           <p className="font-semibold text-lg">{profile?.name || "Utilisateur"}</p>
-          <p className="text-sm text-muted-foreground">{user.phone || ""}</p>
+          <p className="text-sm text-muted-foreground">{user.email || user.phone || ""}</p>
         </div>
       </div>
 

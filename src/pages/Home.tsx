@@ -17,7 +17,9 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { currentUserHasOpenDeal, syncMarketplaceExpirations } from "@/lib/marketplace";
 import { PARCEL_CATEGORIES } from "@/data/wilayas";
+import { toast } from "sonner";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -25,24 +27,42 @@ export default function Home() {
   const [parcels, setParcels] = useState<Tables<"parcel_requests">[]>([]);
 
   useEffect(() => {
-    Promise.all([
-      supabase
-        .from("trips")
-        .select("*")
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(5),
-      supabase
-        .from("parcel_requests")
-        .select("*")
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(5),
-    ]).then(([t, p]) => {
+    void (async () => {
+      await syncMarketplaceExpirations();
+      const nowIso = new Date().toISOString();
+
+      const [t, p] = await Promise.all([
+        supabase
+          .from("trips")
+          .select("*")
+          .eq("status", "active")
+          .gte("departure_date", nowIso)
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("parcel_requests")
+          .select("*")
+          .eq("status", "active")
+          .gte("date_window_end", nowIso)
+          .order("created_at", { ascending: false })
+          .limit(5),
+      ]);
+
       setTrips(t.data ?? []);
       setParcels(p.data ?? []);
-    });
+    })();
   }, []);
+
+  const guardOpenDealAndNavigate = async (path: string, blockedMessage: string) => {
+    await syncMarketplaceExpirations();
+    const hasOpenDeal = await currentUserHasOpenDeal();
+    if (hasOpenDeal) {
+      toast.error(blockedMessage);
+      return;
+    }
+
+    navigate(path);
+  };
 
   return (
     <div className="mobile-page">
@@ -85,7 +105,12 @@ export default function Home() {
         <div className="grid grid-cols-2 gap-3">
           <Card
             className="p-4 cursor-pointer border-0 bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl transition-shadow"
-            onClick={() => navigate("/trips/create")}
+            onClick={() => {
+              void guardOpenDealAndNavigate(
+                "/trips/create",
+                "Clôturez votre deal actif avant de publier un nouveau trajet."
+              );
+            }}
           >
             <div className="w-10 h-10 rounded-lg bg-primary-foreground/20 flex items-center justify-center mb-3">
               <Car className="h-5 w-5 text-primary-foreground" />
@@ -97,7 +122,12 @@ export default function Home() {
           </Card>
           <Card
             className="p-4 cursor-pointer border border-primary/20 bg-card hover:shadow-md transition-shadow"
-            onClick={() => navigate("/parcels/create")}
+            onClick={() => {
+              void guardOpenDealAndNavigate(
+                "/parcels/create",
+                "Clôturez votre deal actif avant de publier un nouveau colis."
+              );
+            }}
           >
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
               <Package className="h-5 w-5 text-primary" />
@@ -124,7 +154,7 @@ export default function Home() {
           </p>
           <div className="mt-3 flex items-center gap-3">
             <button
-              onClick={() => navigate("/safety")}
+              onClick={() => navigate("/processus/securite")}
               className="px-3 py-1.5 bg-primary-foreground text-emerald-900 rounded-lg text-xs font-bold"
             >
               En savoir plus

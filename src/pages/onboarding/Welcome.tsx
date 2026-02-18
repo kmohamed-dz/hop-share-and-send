@@ -5,6 +5,7 @@ import { ArrowRight, Car, ChevronDown, MapPin, Package, Shield, Users } from "lu
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { ONBOARDING_FLAG_KEY } from "@/components/auth/AuthGate";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
 const SLIDES = [
@@ -31,6 +32,7 @@ const SLIDES = [
 export default function Welcome() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
+  const { language, setLanguage } = useLanguage();
 
   const handleNext = () => {
     if (currentSlide < SLIDES.length - 1) {
@@ -38,7 +40,6 @@ export default function Welcome() {
       return;
     }
 
-    localStorage.setItem(ONBOARDING_FLAG_KEY, "true");
     navigate("/onboarding/role");
   };
 
@@ -53,8 +54,13 @@ export default function Welcome() {
 
         <BrandLogo size="sm" className="h-10" />
 
-        <button className="flex items-center gap-1 rounded-full border border-primary/25 px-3 py-1.5 text-sm font-semibold text-primary">
-          FR <ChevronDown className="h-4 w-4" />
+        <button
+          onClick={() => {
+            void setLanguage(language === "fr" ? "ar" : "fr");
+          }}
+          className="flex items-center gap-1 rounded-full border border-primary/25 px-3 py-1.5 text-sm font-semibold text-primary"
+        >
+          {language.toUpperCase()} <ChevronDown className="h-4 w-4" />
         </button>
       </div>
 

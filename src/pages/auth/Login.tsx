@@ -1,173 +1,195 @@
-import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, Loader2, Mail } from "lucide-react";
+
+import {
+  ONBOARDING_ROLE_KEY,
+  PENDING_VERIFICATION_EMAIL_KEY,
+} from "@/components/auth/AuthGate";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Mail, CheckCircle2, Info } from "lucide-react";
+
+type LoginLocationState = {
+  role?: "traveler" | "owner" | "both";
+};
+
+function getPasswordResetRedirectTo(): string {
+  return `${window.location.origin}${window.location.pathname}#/auth/login`;
+}
+
+function isUnverifiedEmailError(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return normalized.includes("email not confirmed") || normalized.includes("email not verified");
+}
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [step, setStep] = useState<"email" | "sent">("email");
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const role = (location.state as any)?.role;
 
-  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
-  const handleSendMagicLink = async () => {
-    if (!isEmailValid) {
-      toast.error("Veuillez entrer une adresse email valide.");
+  const role = (location.state as LoginLocationState | null)?.role;
+
+  useEffect(() => {
+    if (role) {
+      localStorage.setItem(ONBOARDING_ROLE_KEY, role);
+    }
+  }, [role]);
+
+  const normalizedEmail = useMemo(() => email.trim().toLowerCase(), [email]);
+
+  const handleLogin = async () => {
+    if (!normalizedEmail || !password) {
+      toast.error("Champs requis", {
+        description: "E-mail et mot de passe sont obligatoires.",
+      });
       return;
     }
 
     setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: { role: role || "both" },
-        },
-      });
 
-      if (error) {
-        toast.error("Erreur d'envoi : " + error.message);
-      } else {
-        setStep("sent");
+    const { error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+
+    if (error) {
+      if (isUnverifiedEmailError(error.message)) {
+        localStorage.setItem(PENDING_VERIFICATION_EMAIL_KEY, normalizedEmail);
+        toast.error("E-mail non vérifié", {
+          description: "Vérifiez votre boîte mail avant de continuer.",
+        });
+        navigate("/auth/verify", { replace: true });
+        setLoading(false);
+        return;
       }
-    } catch {
-      toast.error("Erreur de connexion. Vérifiez votre connexion internet.");
+
+      toast.error("Connexion impossible", { description: error.message });
+      setLoading(false);
+      return;
     }
+
+    localStorage.removeItem(PENDING_VERIFICATION_EMAIL_KEY);
+    toast.success("Connexion réussie");
+    navigate("/", { replace: true });
     setLoading(false);
   };
 
-  const handleResend = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: { role: role || "both" },
-        },
+  const handleForgotPassword = async () => {
+    if (!normalizedEmail) {
+      toast.error("Adresse e-mail requise", {
+        description: "Entrez votre e-mail pour recevoir le lien de réinitialisation.",
       });
-      if (error) {
-        toast.error("Erreur : " + error.message);
-      } else {
-        toast.success("Lien renvoyé !");
-      }
-    } catch {
-      toast.error("Erreur de connexion.");
+      return;
     }
-    setLoading(false);
+
+    setResetLoading(true);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: getPasswordResetRedirectTo(),
+    });
+
+    if (error) {
+      toast.error("Envoi impossible", {
+        description: error.message,
+      });
+      setResetLoading(false);
+      return;
+    }
+
+    toast.success("E-mail envoyé", {
+      description: "Un lien de réinitialisation vous a été envoyé.",
+    });
+    setResetLoading(false);
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background safe-top safe-bottom">
-      {/* Header */}
-      <div className="px-6 pt-4">
-        <button
-          onClick={() => (step === "sent" ? setStep("email") : navigate(-1))}
-          className="p-2 -ml-2 text-foreground"
-          aria-label="Retour"
-        >
+    <div className="flex min-h-screen flex-col bg-[#f7f7f5] px-6 py-8 safe-top safe-bottom">
+      <div className="mx-auto w-full max-w-md">
+        <button onClick={() => navigate(-1)} className="mb-5 -ml-2 p-2 text-foreground" aria-label="Retour">
           <ArrowLeft className="h-5 w-5" />
         </button>
-      </div>
 
-      <div className="px-6 pt-6 pb-8">
-        {/* Icon */}
-        <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center mb-6">
-          {step === "email" ? (
-            <Mail className="h-8 w-8 text-emerald-500" />
-          ) : (
-            <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-          )}
+        <div className="mb-8 text-center">
+          <div className="mb-4 flex justify-center">
+            <BrandLogo size="md" className="h-14" />
+          </div>
+
+          <h1 className="text-2xl font-bold text-foreground">Se connecter</h1>
+          <p className="mt-1 text-sm text-muted-foreground">الدخول</p>
         </div>
 
-        <h1 className="text-2xl font-bold text-foreground mb-2">
-          {step === "email" ? "Connexion par email" : "Vérifiez votre email"}
-        </h1>
-        <p className="text-muted-foreground leading-relaxed">
-          {step === "email"
-            ? "Entrez votre adresse email pour recevoir un lien de connexion sécurisé."
-            : `Un lien de connexion a été envoyé à ${email}. Cliquez dessus pour vous connecter.`}
-        </p>
-      </div>
-
-      <div className="flex-1 px-6">
-        {step === "email" ? (
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
           <div className="space-y-4">
-            <label className="text-sm font-semibold text-foreground">
-              Adresse email
-            </label>
-            <Input
-              type="email"
-              inputMode="email"
-              placeholder="votre@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-14 text-base rounded-xl"
-              autoFocus
-              onKeyDown={(e) => e.key === "Enter" && isEmailValid && handleSendMagicLink()}
-            />
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <Info className="h-5 w-5 text-emerald-500 mt-0.5 shrink-0" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-foreground">
-                    Vérifiez votre boîte de réception
-                  </p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Le lien expire dans 1 heure. Pensez à vérifier vos spams si vous ne le voyez pas.
-                  </p>
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="login-email">E-mail</Label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="login-email"
+                  type="email"
+                  inputMode="email"
+                  placeholder="vous@exemple.com"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="h-11 rounded-xl pl-10"
+                  autoFocus
+                />
               </div>
             </div>
-          </div>
-        )}
-      </div>
 
-      <div className="px-6 pb-8 space-y-3">
-        {step === "email" ? (
-          <>
-            <Button
-              onClick={handleSendMagicLink}
-              disabled={loading || !isEmailValid}
-              className="w-full h-14 text-base font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20"
-            >
-              {loading ? "Envoi en cours..." : "Envoyer le lien"}
-            </Button>
-            <div className="flex items-start gap-2 pt-2">
-              <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Nous vous enverrons un lien magique pour vous connecter sans mot de passe.
-              </p>
+            <div className="space-y-2">
+              <Label htmlFor="login-password">Mot de passe</Label>
+              <Input
+                id="login-password"
+                type="password"
+                placeholder="Votre mot de passe"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="h-11 rounded-xl"
+              />
             </div>
-          </>
-        ) : (
-          <>
-            <Button
-              onClick={handleResend}
-              disabled={loading}
-              variant="outline"
-              className="w-full h-14 text-base font-semibold rounded-xl"
-            >
-              {loading ? "Envoi en cours..." : "Renvoyer le lien"}
-            </Button>
-            <button
-              onClick={() => setStep("email")}
-              className="w-full text-center text-sm text-emerald-600 font-medium pt-1"
-            >
-              Changer d'adresse email
-            </button>
-          </>
-        )}
+          </div>
+
+          <Button
+            onClick={handleLogin}
+            disabled={loading || !normalizedEmail || !password}
+            className="mt-6 h-11 w-full rounded-xl bg-emerald-500 text-base font-semibold text-white hover:bg-emerald-600"
+          >
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Connexion...
+              </span>
+            ) : (
+              "Se connecter"
+            )}
+          </Button>
+
+          <button
+            onClick={handleForgotPassword}
+            disabled={resetLoading}
+            className="mt-4 w-full text-center text-sm font-medium text-primary disabled:opacity-60"
+          >
+            {resetLoading ? "Envoi..." : "Mot de passe oublié"}
+          </button>
+
+          <button
+            onClick={() => navigate("/auth/signup", { state: { role } })}
+            className="mt-3 w-full text-center text-sm font-medium text-muted-foreground"
+          >
+            Pas de compte ? Créer un compte
+          </button>
+        </div>
       </div>
     </div>
   );

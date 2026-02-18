@@ -5,6 +5,7 @@ import { MessageCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { syncMarketplaceExpirations } from "@/lib/marketplace";
 
 type DealExt = Tables<"deals">;
 
@@ -13,14 +14,15 @@ export default function Messages() {
   const [deals, setDeals] = useState<DealExt[]>([]);
 
   useEffect(() => {
-    supabase
-      .from("deals")
-      .select("*")
-      .in("status", ["mutually_accepted", "picked_up", "delivered_confirmed"])
-      .order("updated_at", { ascending: false })
-      .then(({ data }) => {
-        setDeals((data as DealExt[]) ?? []);
-      });
+    void (async () => {
+      await syncMarketplaceExpirations();
+      const { data } = await supabase
+        .from("deals")
+        .select("*")
+        .in("status", ["mutually_accepted", "pickup_confirmed", "delivered", "closed"])
+        .order("updated_at", { ascending: false });
+      setDeals((data as DealExt[]) ?? []);
+    })();
   }, []);
 
   return (
