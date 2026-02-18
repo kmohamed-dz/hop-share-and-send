@@ -20,6 +20,7 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [sessionChecking, setSessionChecking] = useState(true);
 
   const canSubmit = useMemo(
     () => password.length >= 6 && confirmPassword.length >= 6 && password === confirmPassword,
@@ -42,6 +43,7 @@ export default function ResetPassword() {
 
       if (!active) return;
       setSessionReady(Boolean(session?.user));
+      setSessionChecking(false);
     };
 
     void bootstrap();
@@ -95,7 +97,13 @@ export default function ResetPassword() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          {!sessionReady ? (
+          {sessionChecking ? (
+            <div className="space-y-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                {language === "ar" ? "جارٍ التحقق من الرابط..." : "Validation du lien en cours..."}
+              </p>
+            </div>
+          ) : !sessionReady ? (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">{t("auth.reset.invalid_session")}</p>
               <Button className="w-full" onClick={() => navigate("/auth/login", { replace: true })}>

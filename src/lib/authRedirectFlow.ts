@@ -15,14 +15,33 @@ function collectParams(url: URL): URLSearchParams {
     return merged;
   }
 
-  const hashQueryPart = rawHash.includes("?") ? rawHash.split("?")[1] : rawHash;
-  const hashParams = new URLSearchParams(hashQueryPart);
+  const candidates: string[] = [];
 
-  hashParams.forEach((value, key) => {
-    if (!merged.has(key)) {
-      merged.set(key, value);
-    }
-  });
+  // HashRouter style: "#/auth/callback?code=..."
+  const queryIndex = rawHash.indexOf("?");
+  if (queryIndex >= 0) {
+    candidates.push(rawHash.slice(queryIndex + 1));
+  }
+
+  // Recovery links can be "#/auth/reset-password#access_token=..."
+  const nestedHashIndex = rawHash.indexOf("#");
+  if (nestedHashIndex >= 0) {
+    candidates.push(rawHash.slice(nestedHashIndex + 1));
+  }
+
+  // Plain fragment style: "#access_token=...&refresh_token=..."
+  if (!rawHash.startsWith("/") && rawHash.includes("=")) {
+    candidates.push(rawHash);
+  }
+
+  for (const candidate of candidates) {
+    const hashParams = new URLSearchParams(candidate);
+    hashParams.forEach((value, key) => {
+      if (!merged.has(key)) {
+        merged.set(key, value);
+      }
+    });
+  }
 
   return merged;
 }

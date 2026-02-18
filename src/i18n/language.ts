@@ -65,13 +65,37 @@ const TRANSLATIONS = {
     fr: "Paramètres",
     ar: "الإعدادات",
   },
+  "settings.description": {
+    fr: "Préférences de notification, confidentialité et compte (à venir).",
+    ar: "تفضيلات الإشعارات والخصوصية والحساب (قريباً).",
+  },
   "settings.language": {
     fr: "Langue / اللغة",
     ar: "اللغة / Langue",
   },
+  "settings.language_fr": {
+    fr: "Français",
+    ar: "الفرنسية",
+  },
+  "settings.language_ar": {
+    fr: "Arabe",
+    ar: "العربية",
+  },
   "settings.process_security": {
     fr: "Processus & sécurité",
     ar: "العملية والأمان",
+  },
+  "settings.process_security_desc": {
+    fr: "Matching, contact, remise et traçabilité",
+    ar: "المطابقة والتواصل والتسليم وإمكانية التتبع",
+  },
+  "settings.report_incident": {
+    fr: "Signaler un incident",
+    ar: "الإبلاغ عن حادث",
+  },
+  "settings.report_incident_desc": {
+    fr: "Créer un signalement sécurité",
+    ar: "إنشاء بلاغ أمني",
   },
   "admin.access_denied": {
     fr: "Accès refusé: vous n'êtes pas administrateur.",

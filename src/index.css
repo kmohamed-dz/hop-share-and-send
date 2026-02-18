@@ -104,9 +104,20 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    direction: ltr;
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  html[dir="rtl"] body {
+    direction: rtl;
+    font-family: 'Noto Sans Arabic', 'Tajawal', 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  html[dir="rtl"] input,
+  html[dir="rtl"] textarea {
+    text-align: right;
   }
 }
 

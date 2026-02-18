@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Loader2, LogOut, MailCheck, RefreshCw } from "lucide-react";
 
 import { PENDING_VERIFICATION_EMAIL_KEY } from "@/components/auth/AuthGate";
@@ -18,6 +18,7 @@ function getEmailRedirectTo(): string {
 
 export default function VerifyEmail() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { language } = useAppLanguage();
 
   const [email, setEmail] = useState("");
@@ -31,6 +32,7 @@ export default function VerifyEmail() {
 
     const bootstrap = async () => {
       const pendingEmail = localStorage.getItem(PENDING_VERIFICATION_EMAIL_KEY) ?? "";
+      const stateEmail = (location.state as { email?: string } | null)?.email?.trim().toLowerCase() ?? "";
 
       const {
         data: { session },
@@ -39,7 +41,7 @@ export default function VerifyEmail() {
       if (!active) return;
 
       const sessionEmail = session?.user?.email?.trim().toLowerCase() ?? "";
-      const resolvedEmail = sessionEmail || pendingEmail;
+      const resolvedEmail = sessionEmail || stateEmail || pendingEmail;
       setEmail(resolvedEmail);
 
       if (sessionEmail && session?.user?.email_confirmed_at) {
@@ -53,7 +55,7 @@ export default function VerifyEmail() {
     return () => {
       active = false;
     };
-  }, [navigate]);
+  }, [location.state, navigate]);
 
   const handleResend = async () => {
     if (!normalizedEmail) {
@@ -142,7 +144,10 @@ export default function VerifyEmail() {
           </div>
 
           <p className="mb-4 text-sm text-muted-foreground">
-            L'accès à l'application nécessite une adresse e-mail vérifiée avant la configuration du profil.
+            FR: Email de confirmation envoyé. Vérifiez votre boîte de réception et vos spams.
+          </p>
+          <p className="mb-4 text-sm text-muted-foreground">
+            AR: تم إرسال رسالة التأكيد. تحقق من البريد الوارد والرسائل غير المرغوب فيها.
           </p>
 
           <div className="space-y-2">
@@ -193,7 +198,7 @@ export default function VerifyEmail() {
             <Button onClick={handleSignOut} variant="ghost" className="w-full h-11 rounded-xl text-muted-foreground">
               <span className="flex items-center justify-center gap-2">
                 <LogOut className="h-4 w-4" />
-                Changer de compte
+                Retour à la connexion
               </span>
             </Button>
           </div>

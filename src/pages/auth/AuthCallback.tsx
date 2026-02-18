@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import {
   ONBOARDING_FLAG_KEY,
   PENDING_VERIFICATION_EMAIL_KEY,
-  REDIRECT_AFTER_LOGIN_KEY,
 } from "@/components/auth/AuthGate";
 import { useAppLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -69,14 +68,6 @@ export default function AuthCallback() {
         return;
       }
 
-      const redirectPath = localStorage.getItem(REDIRECT_AFTER_LOGIN_KEY);
-      if (redirectPath && !redirectPath.startsWith("/auth")) {
-        localStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
-        navigate(redirectPath, { replace: true });
-        return;
-      }
-
-      localStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
       navigate("/", { replace: true });
     };
 

@@ -142,7 +142,12 @@ If you see `Le service SMS n'est pas encore configuré…`, Supabase Auth is not
    - Warning:
      - Remove any `lovable` / `v0` domains from **Redirect URLs**. Otherwise auth emails can keep redirecting there.
    - Save.
-3. Real end-to-end verification:
+3. Signup code-level redirect:
+   - The app sends signup verification emails with:
+     - `emailRedirectTo = https://kmohamed-dz.github.io/hop-share-and-send/#/auth/callback`
+   - This is built from `VITE_PUBLIC_APP_URL` via `getPublicUrl()`/`getHashUrl()`.
+4. Remove `lovable` / `v0` domains from Supabase Redirect URLs to avoid wrong-domain email links.
+5. Real end-to-end verification:
    - Test with an Algerian number normalized to `+213` format (e.g. `+213552623560`).
    - Confirm SMS is actually received, then verify OTP in the app.
 
@@ -150,7 +155,7 @@ If you see `Le service SMS n'est pas encore configuré…`, Supabase Auth is not
 
 ### Public app URL env (single source of truth)
 
-- `VITE_PUBLIC_APP_URL=https://kmohamed-dz.github.io/hop-share-and-send`
+- `VITE_PUBLIC_APP_URL=https://kmohamed-dz.github.io/hop-share-and-send/`
 - Used for auth email redirects (`/auth/callback`, `/auth/reset-password`).
 - If omitted, the app falls back to `window.location.origin` + Vite base.
 

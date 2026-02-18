@@ -1,47 +1,26 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ChevronRight, LayoutDashboard, Settings as SettingsIcon, Shield, Workflow } from "lucide-react";
+import { ArrowLeft, ChevronRight, Settings as SettingsIcon, Shield, Workflow } from "lucide-react";
 
-import { useAppLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Card } from "@/components/ui/card";
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { language, setLanguage, t } = useAppLanguage();
-  const [isAdmin, setIsAdmin] = useState(false);
 
-  useEffect(() => {
-    void (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
-
-      const { data } = await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      setIsAdmin(Boolean((data as { is_admin?: boolean } | null)?.is_admin));
-    })();
-  }, []);
-
+  const { language, isRTL, setLanguage, t } = useLanguage();
   return (
     <div className="mobile-page space-y-4">
       <div className="mobile-header">
-        <button onClick={() => navigate(-1)} className="p-1"><ArrowLeft className="h-5 w-5" /></button>
+        <button onClick={() => navigate(-1)} className="p-1" aria-label={t("settings.title")}>
+          <ArrowLeft className={`h-5 w-5 ${isRTL ? "rotate-180" : ""}`} />
+        </button>
         <h1 className="maak-section-title">{t("settings.title")}</h1>
       </div>
       <Card className="maak-card p-4 flex items-center gap-3">
         <SettingsIcon className="h-5 w-5 text-primary" />
-        <p className="text-sm">Préférences de notification, confidentialité et compte (à venir).</p>
+        <p className="text-sm">{t("settings.description")}</p>
       </Card>
+
 
       <Card className="maak-card p-4 space-y-3">
         <p className="text-sm font-semibold">{t("settings.language")}</p>
@@ -52,7 +31,7 @@ export default function Settings() {
             }}
             className={`rounded-xl border px-3 py-2 text-sm font-semibold ${language === "fr" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
           >
-            Français
+            {t("settings.language_fr")}
           </button>
           <button
             onClick={() => {
@@ -60,7 +39,7 @@ export default function Settings() {
             }}
             className={`rounded-xl border px-3 py-2 text-sm font-semibold ${language === "ar" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
           >
-            العربية
+            {t("settings.language_ar")}
           </button>
         </div>
       </Card>
@@ -70,45 +49,30 @@ export default function Settings() {
         className="w-full"
       >
         <Card className="maak-card p-4 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors">
-          <div className="flex items-center gap-3 text-left">
+          <div className={`flex items-center gap-3 ${isRTL ? "text-right" : "text-left"}`}>
             <Workflow className="h-5 w-5 text-primary" />
             <div>
               <p className="text-sm font-semibold">{t("settings.process_security")}</p>
-              <p className="text-xs text-muted-foreground">Matching, contact, remise et traçabilité</p>
+              <p className="text-xs text-muted-foreground">{t("settings.process_security_desc")}</p>
             </div>
           </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          <ChevronRight className={`h-4 w-4 text-muted-foreground ${isRTL ? "rotate-180" : ""}`} />
         </Card>
       </button>
-
-      {isAdmin && (
-        <button onClick={() => navigate("/admin")} className="w-full">
-          <Card className="maak-card p-4 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors">
-            <div className="flex items-center gap-3 text-left">
-              <LayoutDashboard className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-semibold">{t("admin.dashboard")}</p>
-                <p className="text-xs text-muted-foreground">Statistiques et tables en lecture seule</p>
-              </div>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </Card>
-        </button>
-      )}
 
       <button
         onClick={() => navigate("/safety")}
         className="w-full"
       >
         <Card className="maak-card p-4 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors">
-          <div className="flex items-center gap-3 text-left">
+          <div className={`flex items-center gap-3 ${isRTL ? "text-right" : "text-left"}`}>
             <Shield className="h-5 w-5 text-primary" />
             <div>
-              <p className="text-sm font-semibold">Signaler un incident</p>
-              <p className="text-xs text-muted-foreground">Créer un signalement sécurité</p>
+              <p className="text-sm font-semibold">{t("settings.report_incident")}</p>
+              <p className="text-xs text-muted-foreground">{t("settings.report_incident_desc")}</p>
             </div>
           </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          <ChevronRight className={`h-4 w-4 text-muted-foreground ${isRTL ? "rotate-180" : ""}`} />
         </Card>
       </button>
     </div>

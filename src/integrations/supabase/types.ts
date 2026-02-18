@@ -239,6 +239,8 @@ export type Database = {
           role_preference: string
           updated_at: string
           user_id: string
+          wilaya_code: string | null
+          wilaya_name: string | null
           wilaya: string | null
         }
         Insert: {
@@ -259,6 +261,8 @@ export type Database = {
           role_preference?: string
           updated_at?: string
           user_id: string
+          wilaya_code?: string | null
+          wilaya_name?: string | null
           wilaya?: string | null
         }
         Update: {
@@ -279,6 +283,8 @@ export type Database = {
           role_preference?: string
           updated_at?: string
           user_id?: string
+          wilaya_code?: string | null
+          wilaya_name?: string | null
           wilaya?: string | null
         }
         Relationships: []

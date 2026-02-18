@@ -28,6 +28,10 @@ function applyHtmlLanguage(language: AppLanguage): void {
 }
 
 function readStoredLanguage(): AppLanguage {
+  if (typeof window === "undefined") {
+    return "fr";
+  }
+
   const modern = localStorage.getItem(LANGUAGE_STORAGE_KEY);
   if (modern) return normalizeLanguage(modern);
 
@@ -35,26 +39,29 @@ function readStoredLanguage(): AppLanguage {
   return normalizeLanguage(legacy);
 }
 
-function extractProfileLanguage(data: Record<string, unknown> | null): AppLanguage {
+function extractProfileLanguage(data: Record<string, unknown> | null): AppLanguage | null {
   const languagePreference = typeof data?.language_preference === "string" ? data.language_preference : null;
   const preferredLanguage = typeof data?.preferred_language === "string" ? data.preferred_language : null;
-  return normalizeLanguage(languagePreference ?? preferredLanguage);
+  const resolved = languagePreference ?? preferredLanguage;
+  if (!resolved) return null;
+  return normalizeLanguage(resolved);
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<AppLanguage>("fr");
+  const [language, setLanguageState] = useState<AppLanguage>(() => readStoredLanguage());
 
   const setLocalLanguage = useCallback((nextLanguage: AppLanguage) => {
     const normalized = normalizeLanguage(nextLanguage);
     setLanguageState(normalized);
+    if (typeof window === "undefined") return;
     localStorage.setItem(LANGUAGE_STORAGE_KEY, normalized);
     localStorage.removeItem(LEGACY_LANGUAGE_STORAGE_KEY);
     applyHtmlLanguage(normalized);
   }, []);
 
   useEffect(() => {
-    setLocalLanguage(readStoredLanguage());
-  }, [setLocalLanguage]);
+    applyHtmlLanguage(language);
+  }, [language]);
 
   useEffect(() => {
     let active = true;
@@ -73,7 +80,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (!active) return;
-      setLocalLanguage(extractProfileLanguage((data as Record<string, unknown> | null) ?? null));
+      const profileLanguage = extractProfileLanguage((data as Record<string, unknown> | null) ?? null);
+      if (profileLanguage) {
+        setLocalLanguage(profileLanguage);
+      }
     };
 
     void syncFromProfile();
@@ -89,7 +99,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         .eq("user_id", session.user.id)
         .maybeSingle()
         .then(({ data }) => {
-          setLocalLanguage(extractProfileLanguage((data as Record<string, unknown> | null) ?? null));
+          const profileLanguage = extractProfileLanguage((data as Record<string, unknown> | null) ?? null);
+          if (profileLanguage) {
+            setLocalLanguage(profileLanguage);
+          }
         });
     });
 
@@ -115,8 +128,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         .update({ language_preference: normalized, preferred_language: normalized } as never)
         .eq("user_id", user.id);
 
-      if (error) {
-        console.error("[language:update]", error);
+      if (!error) return;
+
+      const { error: fallbackError } = await supabase
+        .from("profiles")
+        .update({ language_preference: normalized, preferred_language: normalized } as never)
+        .eq("id", user.id);
+
+      if (fallbackError) {
+        console.error("[language:update]", fallbackError);
       }
     },
     [setLocalLanguage]

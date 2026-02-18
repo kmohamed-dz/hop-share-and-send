@@ -24,9 +24,27 @@ function getPasswordResetRedirectTo(): string {
   return getHashRouteUrl("/auth/reset-password");
 }
 
-function isUnverifiedEmailError(message: string): boolean {
-  const normalized = message.toLowerCase();
-  return normalized.includes("email not confirmed") || normalized.includes("email not verified");
+type AuthLikeError = {
+  code?: string | null;
+  message?: string | null;
+};
+
+function isUnverifiedEmailError(error: AuthLikeError): boolean {
+  const normalizedMessage = (error.message ?? "").toLowerCase();
+  const normalizedCode = (error.code ?? "").toLowerCase();
+
+  return (
+    normalizedMessage.includes("email not confirmed") ||
+    normalizedMessage.includes("email not verified") ||
+    normalizedCode.includes("email_not_confirmed")
+  );
+}
+
+function isInvalidCredentialsError(error: AuthLikeError): boolean {
+  const normalizedMessage = (error.message ?? "").toLowerCase();
+  const normalizedCode = (error.code ?? "").toLowerCase();
+
+  return normalizedMessage.includes("invalid login credentials") || normalizedCode.includes("invalid_credentials");
 }
 
 export default function Login() {
@@ -66,12 +84,20 @@ export default function Login() {
 
     if (error) {
       logTechnicalAuthError("login", error);
-      if (isUnverifiedEmailError(error.message)) {
+      if (isUnverifiedEmailError(error)) {
         localStorage.setItem(PENDING_VERIFICATION_EMAIL_KEY, normalizedEmail);
         toast.error("E-mail non vérifié", {
           description: "Vérifiez votre boîte mail avant de continuer.",
         });
         navigate("/auth/verify", { replace: true });
+        setLoading(false);
+        return;
+      }
+
+      if (isInvalidCredentialsError(error)) {
+        toast.error("Connexion impossible", {
+          description: "Email ou mot de passe incorrect.",
+        });
         setLoading(false);
         return;
       }
