@@ -1,5 +1,6 @@
-import { WILAYAS } from "@/data/wilayas";
+import { getWilayaLabel, WILAYAS } from "@/data/wilayas";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAppLanguage } from "@/contexts/LanguageContext";
 
 interface WilayaSelectProps {
   value: string;
@@ -8,6 +9,8 @@ interface WilayaSelectProps {
 }
 
 export function WilayaSelect({ value, onValueChange, placeholder = "Sélectionner une wilaya" }: WilayaSelectProps) {
+  const { language } = useAppLanguage();
+
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger>
@@ -15,8 +18,8 @@ export function WilayaSelect({ value, onValueChange, placeholder = "Sélectionne
       </SelectTrigger>
       <SelectContent className="max-h-60">
         {WILAYAS.map((w) => (
-          <SelectItem key={w.code} value={w.name}>
-            {w.code} - {w.name}
+          <SelectItem key={w.code} value={w.name_fr}>
+            {w.code} - {getWilayaLabel(w, language)}
           </SelectItem>
         ))}
       </SelectContent>

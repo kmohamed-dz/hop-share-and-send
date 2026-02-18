@@ -1,110 +1,97 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
 
-/**
- * Handles the magic link redirect.
- * Supabase puts tokens in the URL hash; the client auto-exchanges them.
- * We wait for a valid session then redirect accordingly.
- */
+import {
+  ONBOARDING_FLAG_KEY,
+  PENDING_VERIFICATION_EMAIL_KEY,
+  REDIRECT_AFTER_LOGIN_KEY,
+} from "@/components/auth/AuthGate";
+import { useAppLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
+import { isEmailVerifiedUser, isProfileRecordComplete } from "@/lib/authState";
+import { resolveSessionFromAuthUrl } from "@/lib/authRedirectFlow";
+import { logTechnicalAuthError, toFriendlyAuthError } from "@/lib/authErrors";
+import { toast } from "sonner";
+
 export default function AuthCallback() {
   const navigate = useNavigate();
-  const [error, setError] = useState<string | null>(null);
+  const { language } = useAppLanguage();
 
   useEffect(() => {
-    let handled = false;
+    let active = true;
 
-    const handleSession = async () => {
-      // Give the Supabase client a moment to process the hash/query tokens
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const run = async () => {
+      try {
+        await resolveSessionFromAuthUrl();
+      } catch (error) {
+        logTechnicalAuthError("callback", error);
+      }
 
-      if (sessionError) {
-        setError(sessionError.message);
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
+
+      if (!active) return;
+
+      if (error || !session?.user) {
+        if (error) {
+          logTechnicalAuthError("callback", error);
+          const friendly = toFriendlyAuthError("callback", language, error.message);
+          toast.error(friendly.title, { description: friendly.description });
+        }
+        navigate("/auth/login", { replace: true });
         return;
       }
 
-      if (session && !handled) {
-        handled = true;
-        // Check if profile exists
-        const { data } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
+      localStorage.setItem(ONBOARDING_FLAG_KEY, "true");
 
-        if (data) {
-          navigate("/", { replace: true });
-        } else {
-          navigate("/profile/setup", {
-            replace: true,
-            state: { role: session.user.user_metadata?.role || "both" },
-          });
-        }
+      if (!isEmailVerifiedUser(session.user)) {
+        navigate("/auth/verify", { replace: true });
         return;
       }
 
-      // If no session yet, listen for auth state change
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          if (session && !handled) {
-            handled = true;
-            const { data } = await supabase
-              .from("profiles")
-              .select("id")
-              .eq("user_id", session.user.id)
-              .maybeSingle();
+      localStorage.removeItem(PENDING_VERIFICATION_EMAIL_KEY);
 
-            if (data) {
-              navigate("/", { replace: true });
-            } else {
-              navigate("/profile/setup", {
-                replace: true,
-                state: { role: session.user.user_metadata?.role || "both" },
-              });
-            }
-          }
-        }
-      );
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
 
-      // Timeout after 10s
-      setTimeout(() => {
-        if (!handled) {
-          subscription.unsubscribe();
-          setError("Le lien a expiré ou est invalide. Veuillez réessayer.");
+      if (!active) return;
+
+      if (profileError || !isProfileRecordComplete((profileData as Record<string, unknown> | null) ?? null)) {
+        if (profileError) {
+          console.error("[auth:callback:profile]", profileError);
         }
-      }, 10000);
+        navigate("/auth/profile-setup", { replace: true });
+        return;
+      }
+
+      const redirectPath = localStorage.getItem(REDIRECT_AFTER_LOGIN_KEY);
+      if (redirectPath && !redirectPath.startsWith("/auth")) {
+        localStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
+        navigate(redirectPath, { replace: true });
+        return;
+      }
+
+      localStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
+      navigate("/", { replace: true });
     };
 
-    handleSession();
-  }, [navigate]);
+    void run();
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background px-6">
-        <div className="text-center space-y-4 max-w-sm">
-          <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
-            <AlertCircle className="h-7 w-7 text-destructive" />
-          </div>
-          <h1 className="text-xl font-bold text-foreground">Erreur de connexion</h1>
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <Button
-            onClick={() => navigate("/auth/login", { replace: true })}
-            className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white"
-          >
-            Retour à la connexion
-          </Button>
-        </div>
-      </div>
-    );
-  }
+    return () => {
+      active = false;
+    };
+  }, [language, navigate]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <div className="text-center space-y-4">
-        <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-muted-foreground text-sm">Connexion en cours...</p>
+    <div className="flex min-h-screen items-center justify-center bg-background px-6">
+      <div className="rounded-2xl border border-border bg-card px-6 py-5 text-center shadow-sm">
+        <p className="text-sm font-semibold text-foreground">Validation en cours...</p>
+        <p className="mt-1 text-xs text-muted-foreground">جاري التحقق...</p>
       </div>
     </div>
   );

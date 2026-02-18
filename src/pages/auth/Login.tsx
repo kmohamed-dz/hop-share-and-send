@@ -10,7 +10,10 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAppLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { logTechnicalAuthError, toFriendlyAuthError } from "@/lib/authErrors";
+import { getHashRouteUrl } from "@/lib/publicUrl";
 import { toast } from "sonner";
 
 type LoginLocationState = {
@@ -18,7 +21,7 @@ type LoginLocationState = {
 };
 
 function getPasswordResetRedirectTo(): string {
-  return `${window.location.origin}${window.location.pathname}#/auth/login`;
+  return getHashRouteUrl("/auth/reset-password");
 }
 
 function isUnverifiedEmailError(message: string): boolean {
@@ -29,6 +32,7 @@ function isUnverifiedEmailError(message: string): boolean {
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { language } = useAppLanguage();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -61,6 +65,7 @@ export default function Login() {
     });
 
     if (error) {
+      logTechnicalAuthError("login", error);
       if (isUnverifiedEmailError(error.message)) {
         localStorage.setItem(PENDING_VERIFICATION_EMAIL_KEY, normalizedEmail);
         toast.error("E-mail non vérifié", {
@@ -71,7 +76,8 @@ export default function Login() {
         return;
       }
 
-      toast.error("Connexion impossible", { description: error.message });
+      const friendly = toFriendlyAuthError("login", language, error.message);
+      toast.error(friendly.title, { description: friendly.description });
       setLoading(false);
       return;
     }
@@ -97,9 +103,9 @@ export default function Login() {
     });
 
     if (error) {
-      toast.error("Envoi impossible", {
-        description: error.message,
-      });
+      logTechnicalAuthError("reset", error);
+      const friendly = toFriendlyAuthError("reset", language, error.message);
+      toast.error(friendly.title, { description: friendly.description });
       setResetLoading(false);
       return;
     }

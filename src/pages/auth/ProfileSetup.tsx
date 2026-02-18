@@ -134,6 +134,7 @@ export default function ProfileSetup() {
       national_id: nationalId.trim(),
       role_preference: role,
       phone: user.phone || "",
+      language_preference: language,
       preferred_language: language,
       profile_complete: true,
     };

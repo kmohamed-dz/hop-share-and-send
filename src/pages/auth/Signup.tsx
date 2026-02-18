@@ -11,18 +11,16 @@ import { WilayaSelect } from "@/components/WilayaSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useAppLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { logTechnicalAuthError, toFriendlyAuthError } from "@/lib/authErrors";
+import { getHashRouteUrl } from "@/lib/publicUrl";
 import { isValidWilayaName } from "@/lib/wilaya";
 import { toast } from "sonner";
 
 type SignupLocationState = {
   role?: "traveler" | "owner" | "both";
 };
-
-function getEmailRedirectTo(): string {
-  return `${window.location.origin}${window.location.pathname}#/auth/verify`;
-}
 
 function normalizeRole(value: string | null | undefined): "traveler" | "owner" | "both" {
   if (value === "traveler" || value === "owner" || value === "both") {
@@ -35,7 +33,7 @@ function normalizeRole(value: string | null | undefined): "traveler" | "owner" |
 export default function Signup() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { language } = useLanguage();
+  const { language, t } = useAppLanguage();
 
   const [fullName, setFullName] = useState("");
   const [wilaya, setWilaya] = useState("");
@@ -83,7 +81,7 @@ export default function Signup() {
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: getEmailRedirectTo(),
+        emailRedirectTo: getHashRouteUrl("/auth/callback"),
         data: {
           full_name: fullName.trim(),
           name: fullName.trim(),
@@ -92,23 +90,25 @@ export default function Signup() {
           phone: phone.trim() || "",
           role_preference: role,
           profile_complete: false,
+          language_preference: language,
           preferred_language: language,
         },
       },
     });
 
     if (error) {
-      toast.error("Inscription impossible", {
-        description: error.message,
-      });
+      logTechnicalAuthError("signup", error);
+      const friendly = toFriendlyAuthError("signup", language, error.message);
+      toast.error(friendly.title, { description: friendly.description });
       setLoading(false);
       return;
     }
 
     localStorage.setItem(PENDING_VERIFICATION_EMAIL_KEY, normalizedEmail);
 
-    toast.success("Compte créé", {
-      description: "Un e-mail de vérification a été envoyé.",
+    toast.success(t("auth.signup.success_title"), {
+      description:
+        "FR: Email de confirmation envoyé. Vérifiez votre boîte de réception et vos spams.\nAR: تم إرسال رسالة التأكيد. تحقق من البريد الوارد والرسائل غير المرغوب فيها.",
     });
 
     navigate("/auth/verify", { replace: true });

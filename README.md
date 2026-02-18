@@ -128,11 +128,19 @@ If you see `Le service SMS n'est pas encore configuré…`, Supabase Auth is not
      - **MessageBird**: Access Key and Originator.
    - Save.
 2. In **Authentication → URL Configuration**:
-   - Set **Site URL** to your production app URL, for example:
+   - Set **Site URL** to:
      - `https://kmohamed-dz.github.io/hop-share-and-send/`
-   - Add all required **Redirect URLs** (preview + production), including localhost, GitHub Pages, and your Vercel/Lovable domains as applicable, for example:
-     - `http://localhost:8080/`
+   - Add **exact Redirect URLs**:
      - `https://kmohamed-dz.github.io/hop-share-and-send/`
+     - `https://kmohamed-dz.github.io/hop-share-and-send/#/`
+     - `https://kmohamed-dz.github.io/hop-share-and-send/#/auth/callback`
+     - `https://kmohamed-dz.github.io/hop-share-and-send/#/auth/verify`
+     - `https://kmohamed-dz.github.io/hop-share-and-send/#/auth/reset-password`
+     - `https://kmohamed-dz.github.io/hop-share-and-send/#/auth/profile-setup`
+     - `http://localhost:5173/#/auth/callback`
+     - `http://localhost:5173/#/auth/reset-password`
+   - Warning:
+     - Remove any `lovable` / `v0` domains from **Redirect URLs**. Otherwise auth emails can keep redirecting there.
    - Save.
 3. Real end-to-end verification:
    - Test with an Algerian number normalized to `+213` format (e.g. `+213552623560`).
@@ -140,6 +148,11 @@ If you see `Le service SMS n'est pas encore configuré…`, Supabase Auth is not
 
 > Note: phone OTP delivery is controlled by Supabase Auth provider configuration. App code cannot send SMS if Twilio/MessageBird is not configured.
 
+### Public app URL env (single source of truth)
+
+- `VITE_PUBLIC_APP_URL=https://kmohamed-dz.github.io/hop-share-and-send`
+- Used for auth email redirects (`/auth/callback`, `/auth/reset-password`).
+- If omitted, the app falls back to `window.location.origin` + Vite base.
 
 ## Entry flow (AuthGate)
 

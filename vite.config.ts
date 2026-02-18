@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
     "";
 
   return {
-    base: env.GITHUB_ACTIONS === "true" ? "/hop-share-and-send/" : "/",
+    base: "/hop-share-and-send/",
     server: {
       host: "::",
       port: 8080,

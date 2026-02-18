@@ -6,15 +6,19 @@ import { PENDING_VERIFICATION_EMAIL_KEY } from "@/components/auth/AuthGate";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAppLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { logTechnicalAuthError, toFriendlyAuthError } from "@/lib/authErrors";
+import { getHashRouteUrl } from "@/lib/publicUrl";
 import { toast } from "sonner";
 
 function getEmailRedirectTo(): string {
-  return `${window.location.origin}${window.location.pathname}#/auth/verify`;
+  return getHashRouteUrl("/auth/callback");
 }
 
 export default function VerifyEmail() {
   const navigate = useNavigate();
+  const { language } = useAppLanguage();
 
   const [email, setEmail] = useState("");
   const [checking, setChecking] = useState(false);
@@ -70,7 +74,9 @@ export default function VerifyEmail() {
     });
 
     if (error) {
-      toast.error("Impossible de renvoyer le mail", { description: error.message });
+      logTechnicalAuthError("verify", error);
+      const friendly = toFriendlyAuthError("verify", language, error.message);
+      toast.error(friendly.title, { description: friendly.description });
       setResending(false);
       return;
     }
@@ -91,7 +97,9 @@ export default function VerifyEmail() {
     } = await supabase.auth.getUser();
 
     if (error) {
-      toast.error("Erreur de vérification", { description: error.message });
+      logTechnicalAuthError("verify", error);
+      const friendly = toFriendlyAuthError("verify", language, error.message);
+      toast.error(friendly.title, { description: friendly.description });
       setChecking(false);
       return;
     }

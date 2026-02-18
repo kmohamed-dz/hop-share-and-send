@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Card } from "@/components/ui/card";
+import { useAppLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { currentUserHasOpenDeal, syncMarketplaceExpirations } from "@/lib/marketplace";
@@ -23,6 +24,7 @@ import { toast } from "sonner";
 
 export default function Home() {
   const navigate = useNavigate();
+  const { t } = useAppLanguage();
   const [trips, setTrips] = useState<Tables<"trips">[]>([]);
   const [parcels, setParcels] = useState<Tables<"parcel_requests">[]>([]);
 
@@ -146,7 +148,7 @@ export default function Home() {
           <div className="flex items-center gap-1.5 mb-1">
             <Shield className="h-4 w-4" />
             <span className="text-xs font-bold uppercase tracking-wide text-emerald-300">
-              CONSEIL SÉCURITÉ
+              {t("home.security_banner_title")}
             </span>
           </div>
           <p className="font-bold text-sm leading-snug">
@@ -157,7 +159,7 @@ export default function Home() {
               onClick={() => navigate("/processus/securite")}
               className="px-3 py-1.5 bg-primary-foreground text-emerald-900 rounded-lg text-xs font-bold"
             >
-              En savoir plus
+              {t("home.security_banner_cta")}
             </button>
             <button
               onClick={() => navigate("/processus")}

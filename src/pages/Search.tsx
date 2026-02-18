@@ -28,9 +28,12 @@ export default function SearchPage() {
     const q = query.toLowerCase();
 
     // Search matching wilayas
-    const matchingWilayas = WILAYAS.filter((w) =>
-      w.name.toLowerCase().includes(q)
-    ).map((w) => w.name);
+    const matchingWilayas = WILAYAS.filter((entry) => {
+      const byFrenchName = entry.name_fr.toLowerCase().includes(q);
+      const byArabicName = entry.name_ar.toLowerCase().includes(q);
+      const byCode = entry.code.includes(q);
+      return byFrenchName || byArabicName || byCode;
+    }).map((entry) => entry.name_fr);
 
     const fetchData = async () => {
       await syncMarketplaceExpirations();

@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 
+import { LANGUAGE_STORAGE_KEY } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { isEmailVerifiedSession, isProfileRecordComplete } from "@/lib/authState";
 import { syncMarketplaceExpirations } from "@/lib/marketplace";
+import { toast } from "sonner";
 
 const ONBOARDING_FLAG_KEY = "maak_onboarding_done";
 const REDIRECT_AFTER_LOGIN_KEY = "maak_redirect_after_login";
@@ -13,8 +16,11 @@ const ONBOARDING_ROLE_KEY = "maak_onboarding_role";
 const LOGIN_PATH = "/auth/login";
 const SIGNUP_PATH = "/auth/signup";
 const VERIFY_PATH = "/auth/verify";
+const CALLBACK_PATH = "/auth/callback";
+const RESET_PASSWORD_PATH = "/auth/reset-password";
 const PROFILE_SETUP_PATH = "/auth/profile-setup";
 const PROFILE_SETUP_ALIAS_PATH = "/profile/setup";
+const ADMIN_PATH = "/admin";
 
 function isOnboardingPath(pathname: string): boolean {
   return pathname.startsWith("/onboarding");
@@ -32,8 +38,20 @@ function isVerifyPath(pathname: string): boolean {
   return pathname.startsWith(VERIFY_PATH);
 }
 
+function isCallbackPath(pathname: string): boolean {
+  return pathname.startsWith(CALLBACK_PATH);
+}
+
+function isResetPasswordPath(pathname: string): boolean {
+  return pathname.startsWith(RESET_PASSWORD_PATH);
+}
+
 function isProfileSetupPath(pathname: string): boolean {
   return pathname.startsWith(PROFILE_SETUP_PATH) || pathname.startsWith(PROFILE_SETUP_ALIAS_PATH);
+}
+
+function isAdminPath(pathname: string): boolean {
+  return pathname.startsWith(ADMIN_PATH);
 }
 
 function isPublicEntryPath(pathname: string): boolean {
@@ -42,15 +60,10 @@ function isPublicEntryPath(pathname: string): boolean {
     isLoginPath(pathname) ||
     isSignupPath(pathname) ||
     isVerifyPath(pathname) ||
+    isCallbackPath(pathname) ||
+    isResetPasswordPath(pathname) ||
     isProfileSetupPath(pathname)
   );
-}
-
-function isEmailVerified(session: Session | null): boolean {
-  const user = session?.user;
-  if (!user) return false;
-
-  return Boolean(user.email && user.email_confirmed_at);
 }
 
 function isProtectedPath(pathname: string): boolean {
@@ -70,24 +83,16 @@ function isProtectedPath(pathname: string): boolean {
     pathname.startsWith("/settings") ||
     pathname.startsWith("/activity") ||
     pathname.startsWith("/browse") ||
+    pathname.startsWith("/admin") ||
     pathname.includes("/matches")
   );
 }
 
-function isProfileComplete(profile: Record<string, unknown> | null): boolean {
-  if (!profile) return false;
-
-  const fullName = typeof profile.full_name === "string" ? profile.full_name.trim() : "";
-  const wilaya = typeof profile.wilaya === "string" ? profile.wilaya.trim() : "";
-  const nationalId = typeof profile.national_id === "string" ? profile.national_id.trim() : "";
-  const profileCompleteFlag = typeof profile.profile_complete === "boolean" ? profile.profile_complete : null;
-  const hasRequiredFields = Boolean(fullName) && Boolean(wilaya) && Boolean(nationalId);
-
-  if (profileCompleteFlag === null) {
-    return hasRequiredFields;
-  }
-
-  return profileCompleteFlag && hasRequiredFields;
+function resolveAccessDeniedMessage(): string {
+  const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  return stored === "ar"
+    ? "تم رفض الوصول: هذه الصفحة مخصصة للمشرف فقط."
+    : "Accès refusé: cette page est réservée à l'administrateur.";
 }
 
 export function AuthGate() {
@@ -157,8 +162,9 @@ export function AuthGate() {
 
   const loading = sessionLoading || (Boolean(session?.user) && profileLoading);
 
-  const emailVerified = useMemo(() => isEmailVerified(session), [session]);
-  const computedProfileComplete = useMemo(() => isProfileComplete(profile), [profile]);
+  const emailVerified = useMemo(() => isEmailVerifiedSession(session), [session]);
+  const computedProfileComplete = useMemo(() => isProfileRecordComplete(profile), [profile]);
+  const isAdmin = useMemo(() => profile?.is_admin === true, [profile]);
 
   useEffect(() => {
     if (!userId) return;
@@ -171,6 +177,11 @@ export function AuthGate() {
     const { pathname, search, hash } = location;
     const currentPath = `${pathname}${search}${hash}`;
     const onboardingDone = localStorage.getItem(ONBOARDING_FLAG_KEY) === "true";
+    const authSpecialPath = isCallbackPath(pathname) || isResetPasswordPath(pathname);
+
+    if (authSpecialPath) {
+      return;
+    }
 
     if (!session?.user) {
       if (isProtectedPath(pathname)) {
@@ -215,6 +226,12 @@ export function AuthGate() {
       return;
     }
 
+    if (isAdminPath(pathname) && !isAdmin) {
+      toast.error(resolveAccessDeniedMessage());
+      navigate("/", { replace: true });
+      return;
+    }
+
     localStorage.removeItem(ONBOARDING_ROLE_KEY);
 
     if (isPublicEntryPath(pathname)) {
@@ -232,7 +249,7 @@ export function AuthGate() {
         navigate("/", { replace: true });
       }
     }
-  }, [computedProfileComplete, emailVerified, loading, location, navigate, session]);
+  }, [computedProfileComplete, emailVerified, isAdmin, loading, location, navigate, session]);
 
   if (loading) {
     return (

@@ -19,8 +19,16 @@ import DealChat from "@/pages/deals/DealChat";
 import DealDetail from "@/pages/deals/DealDetail";
 import ParcelMatches from "@/pages/matches/ParcelMatches";
 import TripMatches from "@/pages/matches/TripMatches";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminDeals from "@/pages/admin/AdminDeals";
+import AdminMessages from "@/pages/admin/AdminMessages";
+import AdminParcels from "@/pages/admin/AdminParcels";
+import AdminTrips from "@/pages/admin/AdminTrips";
+import AdminUsers from "@/pages/admin/AdminUsers";
+import AuthCallback from "@/pages/auth/AuthCallback";
 import Login from "@/pages/auth/Login";
 import ProfileSetup from "@/pages/auth/ProfileSetup";
+import ResetPassword from "@/pages/auth/ResetPassword";
 import Signup from "@/pages/auth/Signup";
 import VerifyEmail from "@/pages/auth/VerifyEmail";
 import RoleSelection from "@/pages/onboarding/RoleSelection";
@@ -53,7 +61,9 @@ const App = () => (
                 <Route path="/onboarding/role" element={<RoleSelection />} />
                 <Route path="/auth/login" element={<Login />} />
                 <Route path="/auth/signup" element={<Signup />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/auth/verify" element={<VerifyEmail />} />
+                <Route path="/auth/reset-password" element={<ResetPassword />} />
                 <Route path="/auth/profile-setup" element={<ProfileSetup />} />
                 <Route path="/profile/setup" element={<Navigate to="/auth/profile-setup" replace />} />
 
@@ -83,6 +93,12 @@ const App = () => (
                 <Route path="/processus/traceabilite" element={<ProcessusTraceabilite />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/profile/ratings" element={<ProfileRatings />} />
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/users" element={<AdminUsers />} />
+                <Route path="/admin/trips" element={<AdminTrips />} />
+                <Route path="/admin/parcels" element={<AdminParcels />} />
+                <Route path="/admin/deals" element={<AdminDeals />} />
+                <Route path="/admin/messages" element={<AdminMessages />} />
 
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>

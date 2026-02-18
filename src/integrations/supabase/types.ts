@@ -226,6 +226,8 @@ export type Database = {
           deliveries_count: number | null
           full_name: string | null
           id: string
+          is_admin: boolean
+          language_preference: string
           name: string
           national_id: string | null
           phone: string
@@ -244,6 +246,8 @@ export type Database = {
           deliveries_count?: number | null
           full_name?: string | null
           id?: string
+          is_admin?: boolean
+          language_preference?: string
           name: string
           national_id?: string | null
           phone?: string
@@ -262,6 +266,8 @@ export type Database = {
           deliveries_count?: number | null
           full_name?: string | null
           id?: string
+          is_admin?: boolean
+          language_preference?: string
           name?: string
           national_id?: string | null
           phone?: string
@@ -400,7 +406,78 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      admin_get_deals: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          created_at: string
+          id: string
+          owner_user_id: string
+          status: string
+          traveler_user_id: string
+        }[]
+      }
+      admin_get_messages: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          created_at: string
+          deal_id: string
+          id: string
+          sender_id: string
+        }[]
+      }
+      admin_get_parcels: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          created_at: string
+          destination_wilaya: string
+          id: string
+          origin_wilaya: string
+          status: string
+          user_id: string
+        }[]
+      }
+      admin_get_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          deals_accepted_by_sender: number
+          deals_accepted_by_traveler: number
+          deals_closed: number
+          deals_delivered: number
+          deals_mutually_accepted: number
+          deals_pickup_confirmed: number
+          deals_proposed: number
+          total_auth_users: number
+          total_deals: number
+          total_messages: number
+          total_parcels: number
+          total_profiles: number
+          total_trips: number
+        }[]
+      }
+      admin_get_trips: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          created_at: string
+          departure_date: string
+          destination_wilaya: string
+          id: string
+          origin_wilaya: string
+          status: string
+          user_id: string
+        }[]
+      }
+      admin_get_users: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          created_at: string
+          email: string | null
+          email_confirmed: boolean
+          is_admin: boolean
+          profile_complete: boolean
+          user_id: string
+          wilaya: string | null
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
