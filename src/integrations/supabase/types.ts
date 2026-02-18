@@ -35,17 +35,49 @@ export type Database = {
         }
         Relationships: []
       }
+      deal_delivery_codes: {
+        Row: {
+          code_plain: string
+          created_at: string
+          deal_id: string
+        }
+        Insert: {
+          code_plain: string
+          created_at?: string
+          deal_id: string
+        }
+        Update: {
+          code_plain?: string
+          created_at?: string
+          deal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_delivery_codes_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: true
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deals: {
         Row: {
           created_at: string
           delivered_at: string | null
+          delivery_code_consumed: boolean | null
+          delivery_code_hash: string | null
+          delivery_place_set_at: string | null
+          delivery_place_text: string | null
           id: string
+          message: string | null
           owner_confirmed_delivery: boolean | null
           owner_confirmed_pickup: boolean | null
           owner_user_id: string
           parcel_request_id: string | null
           pickup_confirmed_at: string | null
           pickup_photo_url: string | null
+          sender_confirmed: boolean | null
           status: string
           traveler_confirmed_delivery: boolean | null
           traveler_confirmed_pickup: boolean | null
@@ -56,13 +88,19 @@ export type Database = {
         Insert: {
           created_at?: string
           delivered_at?: string | null
+          delivery_code_consumed?: boolean | null
+          delivery_code_hash?: string | null
+          delivery_place_set_at?: string | null
+          delivery_place_text?: string | null
           id?: string
+          message?: string | null
           owner_confirmed_delivery?: boolean | null
           owner_confirmed_pickup?: boolean | null
           owner_user_id: string
           parcel_request_id?: string | null
           pickup_confirmed_at?: string | null
           pickup_photo_url?: string | null
+          sender_confirmed?: boolean | null
           status?: string
           traveler_confirmed_delivery?: boolean | null
           traveler_confirmed_pickup?: boolean | null
@@ -73,13 +111,19 @@ export type Database = {
         Update: {
           created_at?: string
           delivered_at?: string | null
+          delivery_code_consumed?: boolean | null
+          delivery_code_hash?: string | null
+          delivery_place_set_at?: string | null
+          delivery_place_text?: string | null
           id?: string
+          message?: string | null
           owner_confirmed_delivery?: boolean | null
           owner_confirmed_pickup?: boolean | null
           owner_user_id?: string
           parcel_request_id?: string | null
           pickup_confirmed_at?: string | null
           pickup_photo_url?: string | null
+          sender_confirmed?: boolean | null
           status?: string
           traveler_confirmed_delivery?: boolean | null
           traveler_confirmed_pickup?: boolean | null
@@ -350,12 +394,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_settings: {
+        Row: {
+          created_at: string
+          language: string
+          notifications_enabled: boolean
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          language?: string
+          notifications_enabled?: boolean
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          language?: string
+          notifications_enabled?: boolean
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      expire_old_posts: { Args: never; Returns: undefined }
+      has_active_deal: { Args: never; Returns: boolean }
+      verify_delivery_code: {
+        Args: { p_code: string; p_deal_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
