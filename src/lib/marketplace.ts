@@ -69,7 +69,7 @@ export async function syncMarketplaceExpirations(): Promise<void> {
   }
 
   expirySyncPromise = (async () => {
-    await supabase.rpc("expire_marketplace_records" as never);
+    await supabase.rpc("expire_old_posts" as never);
   })();
 
   try {

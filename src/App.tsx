@@ -15,6 +15,7 @@ import Profile from "@/pages/Profile";
 import SearchPage from "@/pages/Search";
 import BrowseParcels from "@/pages/browse/BrowseParcels";
 import BrowseTrips from "@/pages/browse/BrowseTrips";
+import TripDetail from "@/pages/browse/TripDetail";
 import DealChat from "@/pages/deals/DealChat";
 import DealDetail from "@/pages/deals/DealDetail";
 import ParcelMatches from "@/pages/matches/ParcelMatches";
@@ -79,6 +80,7 @@ const App = () => (
                 <Route path="/trips/create" element={<CreateTrip />} />
                 <Route path="/parcels/create" element={<CreateParcel />} />
                 <Route path="/browse/trips" element={<BrowseTrips />} />
+                <Route path="/browse/trips/:tripId" element={<TripDetail />} />
                 <Route path="/browse/parcels" element={<BrowseParcels />} />
                 <Route path="/trips/:tripId/matches" element={<TripMatches />} />
                 <Route path="/parcels/:parcelId/matches" element={<ParcelMatches />} />
