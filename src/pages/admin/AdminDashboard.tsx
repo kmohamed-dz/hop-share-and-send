@@ -49,6 +49,7 @@ export default function AdminDashboard() {
         return;
       }
 
+      if (!data) return;
       const row = (Array.isArray(data) ? data[0] : data) as AdminStats | undefined;
       setStats(row ?? EMPTY_STATS);
     })();

@@ -74,7 +74,7 @@ function assertWilayasIntegrity(): void {
   }
 
   const expectedCodes = Array.from({ length: 58 }, (_, index) => String(index + 1).padStart(2, "0"));
-  const missing = expectedCodes.filter((code) => !uniqueCodes.has(code));
+  const missing = expectedCodes.filter((code) => !uniqueCodes.has(code as typeof codes[number]));
   if (missing.length > 0) {
     throw new Error(`Wilaya dataset invalid: missing codes ${missing.join(", ")}`);
   }
