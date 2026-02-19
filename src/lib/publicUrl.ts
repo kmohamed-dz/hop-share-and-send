@@ -37,7 +37,7 @@ export function getPublicUrl(): string {
 
 export function getHashUrl(path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${getPublicUrl()}/#${normalizedPath}`;
+  return `${getPublicUrl()}${normalizedPath}`;
 }
 
 // Backward-compatible aliases used in existing files.

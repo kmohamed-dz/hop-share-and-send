@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { AuthGate } from "@/components/auth/AuthGate";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -27,13 +27,13 @@ import AdminParcels from "@/pages/admin/AdminParcels";
 import AdminTrips from "@/pages/admin/AdminTrips";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AuthCallback from "@/pages/auth/AuthCallback";
+import ForgotPassword from "@/pages/auth/ForgotPassword";
 import Login from "@/pages/auth/Login";
+import Onboarding from "@/pages/auth/Onboarding";
 import ProfileSetup from "@/pages/auth/ProfileSetup";
 import ResetPassword from "@/pages/auth/ResetPassword";
 import Signup from "@/pages/auth/Signup";
 import VerifyEmail from "@/pages/auth/VerifyEmail";
-import RoleSelection from "@/pages/onboarding/RoleSelection";
-import Welcome from "@/pages/onboarding/Welcome";
 import CreateParcel from "@/pages/parcels/CreateParcel";
 import CreateTrip from "@/pages/trips/CreateTrip";
 import ProcessusContact from "@/pages/processus/ProcessusContact";
@@ -55,21 +55,26 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <HashRouter>
+          <BrowserRouter>
             <Routes>
               <Route element={<AuthGate />}>
-                <Route path="/onboarding/welcome" element={<Welcome />} />
-                <Route path="/onboarding/role" element={<RoleSelection />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Signup />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/auth/login" element={<Login />} />
                 <Route path="/auth/signup" element={<Signup />} />
+                <Route path="/auth/forgot-password" element={<ForgotPassword />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/auth/verify" element={<VerifyEmail />} />
                 <Route path="/auth/reset-password" element={<ResetPassword />} />
+                <Route path="/update-password" element={<ResetPassword />} />
+                <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/auth/profile-setup" element={<ProfileSetup />} />
-                <Route path="/profile/setup" element={<Navigate to="/auth/profile-setup" replace />} />
+                <Route path="/profile/setup" element={<Navigate to="/onboarding" replace />} />
 
                 <Route element={<AppLayout />}>
-                  <Route path="/" element={<Home />} />
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/dashboard" element={<Home />} />
                   <Route path="/activity" element={<Activity />} />
                   <Route path="/messages" element={<Messages />} />
                   <Route path="/profile" element={<Profile />} />
@@ -102,10 +107,10 @@ const App = () => (
                 <Route path="/admin/deals" element={<AdminDeals />} />
                 <Route path="/admin/messages" element={<AdminMessages />} />
 
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Route>
             </Routes>
-          </HashRouter>
+          </BrowserRouter>
         </TooltipProvider>
       </LanguageProvider>
     </QueryClientProvider>

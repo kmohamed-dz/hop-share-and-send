@@ -13,16 +13,11 @@ import { Label } from "@/components/ui/label";
 import { useAppLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { logTechnicalAuthError, toFriendlyAuthError } from "@/lib/authErrors";
-import { getHashRouteUrl } from "@/lib/publicUrl";
 import { toast } from "sonner";
 
 type LoginLocationState = {
   role?: "traveler" | "owner" | "both";
 };
-
-function getPasswordResetRedirectTo(): string {
-  return getHashRouteUrl("/auth/reset-password");
-}
 
 type AuthLikeError = {
   code?: string | null;
@@ -55,7 +50,6 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
 
   const role = (location.state as LoginLocationState | null)?.role;
 
@@ -71,6 +65,7 @@ export default function Login() {
     if (!normalizedEmail || !password) {
       toast.error("Champs requis", {
         description: "E-mail et mot de passe sont obligatoires.",
+        id: "auth-login-validation",
       });
       return;
     }
@@ -88,6 +83,7 @@ export default function Login() {
         localStorage.setItem(PENDING_VERIFICATION_EMAIL_KEY, normalizedEmail);
         toast.error("E-mail non vérifié", {
           description: "Vérifiez votre boîte mail avant de continuer.",
+          id: "auth-login-unverified",
         });
         navigate("/auth/verify", { replace: true });
         setLoading(false);
@@ -97,49 +93,25 @@ export default function Login() {
       if (isInvalidCredentialsError(error)) {
         toast.error("Connexion impossible", {
           description: "Email ou mot de passe incorrect.",
+          id: "auth-login-invalid",
         });
         setLoading(false);
         return;
       }
 
       const friendly = toFriendlyAuthError("login", language, error.message);
-      toast.error(friendly.title, { description: friendly.description });
+      toast.error(friendly.title, {
+        description: friendly.description,
+        id: "auth-login-generic",
+      });
       setLoading(false);
       return;
     }
 
     localStorage.removeItem(PENDING_VERIFICATION_EMAIL_KEY);
-    toast.success("Connexion réussie");
-    navigate("/", { replace: true });
+    toast.success("Connexion réussie", { id: "auth-login-success" });
+    navigate("/dashboard", { replace: true });
     setLoading(false);
-  };
-
-  const handleForgotPassword = async () => {
-    if (!normalizedEmail) {
-      toast.error("Adresse e-mail requise", {
-        description: "Entrez votre e-mail pour recevoir le lien de réinitialisation.",
-      });
-      return;
-    }
-
-    setResetLoading(true);
-
-    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-      redirectTo: getPasswordResetRedirectTo(),
-    });
-
-    if (error) {
-      logTechnicalAuthError("reset", error);
-      const friendly = toFriendlyAuthError("reset", language, error.message);
-      toast.error(friendly.title, { description: friendly.description });
-      setResetLoading(false);
-      return;
-    }
-
-    toast.success("E-mail envoyé", {
-      description: "Un lien de réinitialisation vous a été envoyé.",
-    });
-    setResetLoading(false);
   };
 
   return (
@@ -208,15 +180,16 @@ export default function Login() {
           </Button>
 
           <button
-            onClick={handleForgotPassword}
-            disabled={resetLoading}
-            className="mt-4 w-full text-center text-sm font-medium text-primary disabled:opacity-60"
+            onClick={() =>
+              navigate("/forgot-password", { state: { email: normalizedEmail } })
+            }
+            className="mt-4 w-full text-center text-sm font-medium text-primary"
           >
-            {resetLoading ? "Envoi..." : "Mot de passe oublié"}
+            Mot de passe oublié
           </button>
 
           <button
-            onClick={() => navigate("/auth/signup", { state: { role } })}
+            onClick={() => navigate("/register", { state: { role } })}
             className="mt-3 w-full text-center text-sm font-medium text-muted-foreground"
           >
             Pas de compte ? Créer un compte

@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 
 import {
   ONBOARDING_FLAG_KEY,
-  PENDING_VERIFICATION_EMAIL_KEY,
+  REDIRECT_AFTER_LOGIN_KEY,
 } from "@/components/auth/AuthGate";
 import { useAppLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
-import { isEmailVerifiedUser, isProfileRecordComplete } from "@/lib/authState";
+import { isProfileRecordComplete } from "@/lib/authState";
 import { resolveSessionFromAuthUrl } from "@/lib/authRedirectFlow";
 import { logTechnicalAuthError, toFriendlyAuthError } from "@/lib/authErrors";
+import { fetchProfileByAuthUserId } from "@/lib/profile";
 import { toast } from "sonner";
 
 export default function AuthCallback() {
@@ -37,38 +38,33 @@ export default function AuthCallback() {
         if (error) {
           logTechnicalAuthError("callback", error);
           const friendly = toFriendlyAuthError("callback", language, error.message);
-          toast.error(friendly.title, { description: friendly.description });
+          toast.error(friendly.title, {
+            description: friendly.description,
+            id: "auth-callback-error",
+          });
         }
-        navigate("/auth/login", { replace: true });
+        navigate("/login", { replace: true });
         return;
       }
 
       localStorage.setItem(ONBOARDING_FLAG_KEY, "true");
-
-      if (!isEmailVerifiedUser(session.user)) {
-        navigate("/auth/verify", { replace: true });
-        return;
-      }
-
-      localStorage.removeItem(PENDING_VERIFICATION_EMAIL_KEY);
-
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
+      const profileData = await fetchProfileByAuthUserId(session.user.id);
 
       if (!active) return;
 
-      if (profileError || !isProfileRecordComplete((profileData as Record<string, unknown> | null) ?? null)) {
-        if (profileError) {
-          console.error("[auth:callback:profile]", profileError);
-        }
-        navigate("/auth/profile-setup", { replace: true });
+      if (!isProfileRecordComplete(profileData)) {
+        navigate("/onboarding", { replace: true });
         return;
       }
 
-      navigate("/", { replace: true });
+      const redirectPath = localStorage.getItem(REDIRECT_AFTER_LOGIN_KEY);
+      if (redirectPath) {
+        localStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
+        navigate(redirectPath, { replace: true });
+        return;
+      }
+
+      navigate("/dashboard", { replace: true });
     };
 
     void run();

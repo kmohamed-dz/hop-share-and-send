@@ -23,7 +23,7 @@ function collectParams(url: URL): URLSearchParams {
     candidates.push(rawHash.slice(queryIndex + 1));
   }
 
-  // Recovery links can be "#/auth/reset-password#access_token=..."
+  // Recovery links can be "#/update-password#access_token=..."
   const nestedHashIndex = rawHash.indexOf("#");
   if (nestedHashIndex >= 0) {
     candidates.push(rawHash.slice(nestedHashIndex + 1));

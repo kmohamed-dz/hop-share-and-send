@@ -60,6 +60,7 @@ export default function ResetPassword() {
           language === "ar"
             ? "كلمتا المرور غير متطابقتين أو قصيرتان جداً."
             : "Les mots de passe ne correspondent pas ou sont trop courts.",
+        id: "auth-update-password-validation",
       });
       return;
     }
@@ -71,21 +72,24 @@ export default function ResetPassword() {
     if (error) {
       logTechnicalAuthError("reset", error);
       const friendly = toFriendlyAuthError("reset", language, error.message);
-      toast.error(friendly.title, { description: friendly.description });
+      toast.error(friendly.title, {
+        description: friendly.description,
+        id: "auth-update-password-error",
+      });
       setLoading(false);
       return;
     }
 
-    toast.success(t("auth.reset.success"));
+    toast.success(t("auth.reset.success"), { id: "auth-update-password-success" });
     await supabase.auth.signOut();
-    navigate("/auth/login", { replace: true });
+    navigate("/login", { replace: true });
     setLoading(false);
   };
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f7f7f5] px-6 py-8 safe-top safe-bottom">
       <div className="mx-auto w-full max-w-md">
-        <button onClick={() => navigate("/auth/login")} className="mb-5 -ml-2 p-2 text-foreground" aria-label="Retour">
+        <button onClick={() => navigate("/login")} className="mb-5 -ml-2 p-2 text-foreground" aria-label="Retour">
           <ArrowLeft className="h-5 w-5" />
         </button>
 
@@ -106,7 +110,7 @@ export default function ResetPassword() {
           ) : !sessionReady ? (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">{t("auth.reset.invalid_session")}</p>
-              <Button className="w-full" onClick={() => navigate("/auth/login", { replace: true })}>
+              <Button className="w-full" onClick={() => navigate("/login", { replace: true })}>
                 {language === "ar" ? "العودة لتسجيل الدخول" : "Retour à la connexion"}
               </Button>
             </div>

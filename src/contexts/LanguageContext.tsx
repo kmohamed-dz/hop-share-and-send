@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { fetchProfileByAuthUserId } from "@/lib/profile";
 import {
   normalizeLanguage,
   tLanguage,
@@ -73,11 +74,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
       if (!active || !session?.user) return;
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
+      const data = await fetchProfileByAuthUserId(session.user.id);
 
       if (!active) return;
       const profileLanguage = extractProfileLanguage((data as Record<string, unknown> | null) ?? null);
@@ -93,17 +90,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) return;
 
-      void supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          const profileLanguage = extractProfileLanguage((data as Record<string, unknown> | null) ?? null);
-          if (profileLanguage) {
-            setLocalLanguage(profileLanguage);
-          }
-        });
+      void fetchProfileByAuthUserId(session.user.id).then((data) => {
+        const profileLanguage = extractProfileLanguage((data as Record<string, unknown> | null) ?? null);
+        if (profileLanguage) {
+          setLocalLanguage(profileLanguage);
+        }
+      });
     });
 
     return () => {
@@ -116,28 +108,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     async (nextLanguage: AppLanguage) => {
       const normalized = normalizeLanguage(nextLanguage);
       setLocalLanguage(normalized);
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) return;
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({ language_preference: normalized, preferred_language: normalized } as never)
-        .eq("user_id", user.id);
-
-      if (!error) return;
-
-      const { error: fallbackError } = await supabase
-        .from("profiles")
-        .update({ language_preference: normalized, preferred_language: normalized } as never)
-        .eq("id", user.id);
-
-      if (fallbackError) {
-        console.error("[language:update]", fallbackError);
-      }
     },
     [setLocalLanguage]
   );

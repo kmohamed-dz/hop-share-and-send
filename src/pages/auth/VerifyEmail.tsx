@@ -46,7 +46,7 @@ export default function VerifyEmail() {
 
       if (sessionEmail && session?.user?.email_confirmed_at) {
         localStorage.removeItem(PENDING_VERIFICATION_EMAIL_KEY);
-        navigate("/", { replace: true });
+        navigate("/dashboard", { replace: true });
       }
     };
 
@@ -61,6 +61,7 @@ export default function VerifyEmail() {
     if (!normalizedEmail) {
       toast.error("Adresse e-mail requise", {
         description: "Entrez votre e-mail pour recevoir un nouveau lien de vérification.",
+        id: "auth-verify-required",
       });
       return;
     }
@@ -78,7 +79,10 @@ export default function VerifyEmail() {
     if (error) {
       logTechnicalAuthError("verify", error);
       const friendly = toFriendlyAuthError("verify", language, error.message);
-      toast.error(friendly.title, { description: friendly.description });
+      toast.error(friendly.title, {
+        description: friendly.description,
+        id: "auth-verify-resend-error",
+      });
       setResending(false);
       return;
     }
@@ -86,6 +90,7 @@ export default function VerifyEmail() {
     localStorage.setItem(PENDING_VERIFICATION_EMAIL_KEY, normalizedEmail);
     toast.success("E-mail de vérification renvoyé", {
       description: "Vérifiez votre boîte de réception (et spam).",
+      id: "auth-verify-resend-success",
     });
     setResending(false);
   };
@@ -101,28 +106,32 @@ export default function VerifyEmail() {
     if (error) {
       logTechnicalAuthError("verify", error);
       const friendly = toFriendlyAuthError("verify", language, error.message);
-      toast.error(friendly.title, { description: friendly.description });
+      toast.error(friendly.title, {
+        description: friendly.description,
+        id: "auth-verify-check-error",
+      });
       setChecking(false);
       return;
     }
 
     if (user?.email && user.email_confirmed_at) {
       localStorage.removeItem(PENDING_VERIFICATION_EMAIL_KEY);
-      toast.success("E-mail vérifié");
-      navigate("/", { replace: true });
+      toast.success("E-mail vérifié", { id: "auth-verify-check-success" });
+      navigate("/dashboard", { replace: true });
       setChecking(false);
       return;
     }
 
     toast("Vérification en attente", {
       description: "Confirmez votre e-mail puis reconnectez-vous si nécessaire.",
+      id: "auth-verify-pending",
     });
     setChecking(false);
   };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    navigate("/auth/login", { replace: true });
+    navigate("/login", { replace: true });
   };
 
   return (
