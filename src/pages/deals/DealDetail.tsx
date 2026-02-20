@@ -119,30 +119,34 @@ export default function DealDetail() {
   const handleAccept = async () => {
     if (!dealId || !deal) return;
 
-    // Bilateral acceptance logic
+    // Bilateral acceptance using status field:
+    // proposed → traveler accepts → accepted_by_traveler
+    // proposed → sender accepts → accepted_by_sender
+    // accepted_by_traveler → sender accepts → mutually_accepted
+    // accepted_by_sender → traveler accepts → mutually_accepted
+    // sender_confirmed tracks sender side; status tracks traveler side
     const updates: Record<string, unknown> = {};
 
     if (role === "sender") {
-      if (deal.owner_confirmed_pickup) {
-        toast.info("Déjà accepté de votre côté.");
+      if (deal.sender_confirmed) {
+        toast.info(language === "ar" ? "لقد قبلت بالفعل." : "Déjà accepté de votre côté.");
         return;
       }
-      updates.owner_confirmed_pickup = true;
-      // Check if traveler already accepted
-      if (deal.traveler_confirmed_pickup) {
+      updates.sender_confirmed = true;
+      if (normalizedStatus === "accepted_by_traveler") {
         updates.status = "mutually_accepted";
-      } else if (normalizedStatus === "proposed") {
+      } else {
         updates.status = "accepted_by_sender";
       }
     } else if (role === "traveler") {
-      if (deal.traveler_confirmed_pickup) {
-        toast.info("Déjà accepté de votre côté.");
+      // Traveler acceptance is tracked via status
+      if (normalizedStatus === "accepted_by_traveler" || normalizedStatus === "mutually_accepted") {
+        toast.info(language === "ar" ? "لقد قبلت بالفعل." : "Déjà accepté de votre côté.");
         return;
       }
-      updates.traveler_confirmed_pickup = true;
-      if (deal.owner_confirmed_pickup) {
+      if (normalizedStatus === "accepted_by_sender" || deal.sender_confirmed) {
         updates.status = "mutually_accepted";
-      } else if (normalizedStatus === "proposed") {
+      } else {
         updates.status = "accepted_by_traveler";
       }
     }
@@ -340,14 +344,14 @@ export default function DealDetail() {
           <p className="text-sm font-semibold">
             {language === "ar" ? "القبول الثنائي" : "Acceptation bilatérale"}
           </p>
-          {role === "sender" && deal.owner_confirmed_pickup && (
-            <p className="text-xs text-muted-foreground">
-              {language === "ar" ? "أنت قبلت. في انتظار الناقل." : "Vous avez accepté. En attente du transporteur."}
+          {role === "sender" && deal.sender_confirmed && (
+            <p className="text-xs text-success font-medium">
+              {language === "ar" ? "✓ أنت قبلت. في انتظار الناقل." : "✓ Vous avez accepté. En attente du transporteur."}
             </p>
           )}
-          {role === "traveler" && deal.traveler_confirmed_pickup && (
-            <p className="text-xs text-muted-foreground">
-              {language === "ar" ? "أنت قبلت. في انتظار المرسل." : "Vous avez accepté. En attente de l'expéditeur."}
+          {role === "traveler" && (normalizedStatus === "accepted_by_traveler" || normalizedStatus === "mutually_accepted") && (
+            <p className="text-xs text-success font-medium">
+              {language === "ar" ? "✓ أنت قبلت. في انتظار المرسل." : "✓ Vous avez accepté. En attente de l'expéditeur."}
             </p>
           )}
           <div className="grid grid-cols-2 gap-2">
