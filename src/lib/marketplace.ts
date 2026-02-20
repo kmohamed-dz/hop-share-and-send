@@ -5,23 +5,25 @@ export const DEAL_FLOW_STATUSES = [
   "accepted_by_sender",
   "accepted_by_traveler",
   "mutually_accepted",
-  "pickup_confirmed",
-  "delivered",
+  "picked_up",
+  "delivered_confirmed",
   "closed",
 ] as const;
 
 const CHAT_UNLOCK_STATUS_SET = new Set([
   "mutually_accepted",
-  "pickup_confirmed",
-  "delivered",
+  "picked_up",
+  "delivered_confirmed",
   "closed",
 ]);
+
+export const ACTIVE_PARCEL_STATUSES = ["open", "matched", "in_transit"] as const;
 
 let expirySyncPromise: Promise<void> | null = null;
 
 export function normalizeDealStatus(status: string): string {
-  if (status === "picked_up") return "pickup_confirmed";
-  if (status === "delivered_confirmed") return "closed";
+  if (status === "pickup_confirmed") return "picked_up";
+  if (status === "delivered") return "delivered_confirmed";
   if (status === "accepted") return "mutually_accepted";
   return status;
 }
@@ -42,24 +44,13 @@ export function isDealClosed(status: string | null | undefined): boolean {
 }
 
 export async function currentUserHasOpenDeal(): Promise<boolean> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return false;
-
-  const { data, error } = await supabase
-    .from("deals")
-    .select("id")
-    .or(`owner_user_id.eq.${user.id},traveler_user_id.eq.${user.id}`)
-    .neq("status", "closed")
-    .limit(1);
+  const { data, error } = await supabase.rpc("has_active_deal" as never);
 
   if (error) {
     return false;
   }
 
-  return Boolean(data && data.length > 0);
+  return Boolean(data);
 }
 
 export async function syncMarketplaceExpirations(): Promise<void> {

@@ -66,7 +66,7 @@ EXECUTE FUNCTION public.update_updated_at_column();
 -- ============================================
 -- 4) Trigger: generate delivery code on mutually_accepted
 -- ============================================
-CREATE OR REPLACE FUNCTION public.generate_delivery_code()
+CREATE OR REPLACE FUNCTION public.generate_delivery_code_trigger()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -91,14 +91,16 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS trigger_generate_delivery_code ON public.deals;
 CREATE TRIGGER trigger_generate_delivery_code
 BEFORE UPDATE ON public.deals
 FOR EACH ROW
-EXECUTE FUNCTION public.generate_delivery_code();
+EXECUTE FUNCTION public.generate_delivery_code_trigger();
 
 -- ============================================
 -- 5) RPC: verify delivery code (traveler only)
 -- ============================================
+DROP FUNCTION IF EXISTS public.verify_delivery_code(uuid, text);
 CREATE OR REPLACE FUNCTION public.verify_delivery_code(p_deal_id uuid, p_code text)
 RETURNS jsonb
 LANGUAGE plpgsql

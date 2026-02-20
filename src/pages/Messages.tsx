@@ -19,7 +19,7 @@ export default function Messages() {
       const { data } = await supabase
         .from("deals")
         .select("*")
-        .in("status", ["mutually_accepted", "pickup_confirmed", "delivered", "closed"])
+        .in("status", ["mutually_accepted", "picked_up", "delivered_confirmed", "closed"])
         .order("updated_at", { ascending: false });
       setDeals((data as DealExt[]) ?? []);
     })();

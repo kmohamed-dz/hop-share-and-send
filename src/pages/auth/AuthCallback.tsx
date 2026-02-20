@@ -6,7 +6,7 @@ import {
   REDIRECT_AFTER_LOGIN_KEY,
 } from "@/components/auth/AuthGate";
 import { useAppLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { isProfileRecordComplete } from "@/lib/authState";
 import { resolveSessionFromAuthUrl } from "@/lib/authRedirectFlow";
 import { logTechnicalAuthError, toFriendlyAuthError } from "@/lib/authErrors";
@@ -53,7 +53,7 @@ export default function AuthCallback() {
       if (!active) return;
 
       if (!isProfileRecordComplete(profileData)) {
-        navigate("/onboarding", { replace: true });
+        navigate("/auth/profile-setup", { replace: true });
         return;
       }
 

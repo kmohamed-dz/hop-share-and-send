@@ -11,13 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { logTechnicalAuthError, toFriendlyAuthError } from "@/lib/authErrors";
 import { getHashRouteUrl } from "@/lib/publicUrl";
 import { toast } from "sonner";
 
 type SignupLocationState = {
-  role?: "school_admin" | "teacher" | "student" | "parent";
+  role?: "traveler" | "owner" | "both";
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -28,13 +28,8 @@ function getEmailRedirectTo(): string {
 
 function normalizeRole(
   value: string | null | undefined
-): "school_admin" | "teacher" | "student" | "parent" | null {
-  if (
-    value === "school_admin" ||
-    value === "teacher" ||
-    value === "student" ||
-    value === "parent"
-  ) {
+): "traveler" | "owner" | "both" | null {
+  if (value === "traveler" || value === "owner" || value === "both") {
     return value;
   }
   return null;
@@ -134,7 +129,7 @@ export default function Signup() {
         description: "Votre compte est prêt.",
         id: "auth-signup-success-direct",
       });
-      navigate("/onboarding", { replace: true });
+      navigate("/auth/profile-setup", { replace: true, state: { role: role ?? "both" } });
       setLoading(false);
       return;
     }

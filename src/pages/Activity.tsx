@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Route, Package, X, Clock, CheckCircle2, Handshake } from "lucide-react";
+import { Route, Package, X, Clock, Handshake } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppLanguage } from "@/contexts/LanguageContext";
 import type { Tables } from "@/integrations/supabase/types";
 import { PARCEL_CATEGORIES } from "@/data/wilayas";
+import { ACTIVE_PARCEL_STATUSES } from "@/lib/marketplace";
+
+const ACTIVE_PARCEL_STATUS_SET = new Set<string>([...ACTIVE_PARCEL_STATUSES, "active"]);
 
 function TripCard({ trip, onCancel, lang }: { trip: Tables<"trips">; onCancel: (id: string) => void; lang: string }) {
   const isActive = trip.status === "active";
@@ -43,8 +46,28 @@ function TripCard({ trip, onCancel, lang }: { trip: Tables<"trips">; onCancel: (
 }
 
 function ParcelCard({ parcel, onCancel, lang }: { parcel: Tables<"parcel_requests">; onCancel: (id: string) => void; lang: string }) {
-  const isActive = parcel.status === "active";
+  const isActive = ACTIVE_PARCEL_STATUS_SET.has(parcel.status);
   const cat = PARCEL_CATEGORIES.find((p) => p.id === parcel.category);
+  const statusLabel =
+    parcel.status === "cancelled"
+      ? lang === "ar"
+        ? "ملغى"
+        : "Annulé"
+      : parcel.status === "expired"
+        ? lang === "ar"
+          ? "منتهي"
+          : "Expiré"
+        : parcel.status === "matched"
+          ? lang === "ar"
+            ? "مطابق"
+            : "En matching"
+          : parcel.status === "in_transit"
+            ? lang === "ar"
+              ? "قيد النقل"
+              : "En transit"
+            : lang === "ar"
+              ? "منتهي"
+              : "Terminé";
   return (
     <Card className="p-3.5">
       <div className="flex items-start justify-between">
@@ -58,7 +81,7 @@ function ParcelCard({ parcel, onCancel, lang }: { parcel: Tables<"parcel_request
           </span>
         ) : (
           <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
-            {parcel.status === "cancelled" ? (lang === "ar" ? "ملغى" : "Annulé") : (lang === "ar" ? "منتهي" : "Expiré")}
+            {statusLabel}
           </span>
         )}
       </div>
@@ -146,8 +169,8 @@ export default function Activity() {
 
   const activeTrips = trips.filter((t) => t.status === "active");
   const historyTrips = trips.filter((t) => t.status !== "active");
-  const activeParcels = parcels.filter((p) => p.status === "active");
-  const historyParcels = parcels.filter((p) => p.status !== "active");
+  const activeParcels = parcels.filter((p) => ACTIVE_PARCEL_STATUS_SET.has(p.status));
+  const historyParcels = parcels.filter((p) => !ACTIVE_PARCEL_STATUS_SET.has(p.status));
   const activeDeals = deals.filter((d) => !["closed", "delivered"].includes(d.status));
   const historyDeals = deals.filter((d) => ["closed", "delivered"].includes(d.status));
 

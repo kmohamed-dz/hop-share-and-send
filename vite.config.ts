@@ -7,7 +7,7 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => {
   return {
     base: "/hop-share-and-send/",
-    envPrefix: ["VITE_", "NEXT_PUBLIC_"],
+    envPrefix: "VITE_",
     server: {
       host: "::",
       port: 3000,

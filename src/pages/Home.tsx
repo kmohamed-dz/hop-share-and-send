@@ -18,7 +18,11 @@ import { Card } from "@/components/ui/card";
 import { useAppLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { currentUserHasOpenDeal, syncMarketplaceExpirations } from "@/lib/marketplace";
+import {
+  ACTIVE_PARCEL_STATUSES,
+  currentUserHasOpenDeal,
+  syncMarketplaceExpirations,
+} from "@/lib/marketplace";
 import { PARCEL_CATEGORIES } from "@/data/wilayas";
 import { toast } from "sonner";
 
@@ -44,7 +48,7 @@ export default function Home() {
         supabase
           .from("parcel_requests")
           .select("*")
-          .eq("status", "active")
+          .in("status", [...ACTIVE_PARCEL_STATUSES])
           .gte("date_window_end", nowIso)
           .order("created_at", { ascending: false })
           .limit(5),

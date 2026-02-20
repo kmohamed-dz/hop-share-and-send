@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WilayaSelect } from "@/components/WilayaSelect";
-import { PARCEL_CATEGORIES } from "@/data/wilayas";
+import { findWilayaByStoredName, PARCEL_CATEGORIES } from "@/data/wilayas";
 import { supabase } from "@/integrations/supabase/client";
 import { currentUserHasOpenDeal, syncMarketplaceExpirations } from "@/lib/marketplace";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,13 @@ const SIZE_OPTIONS = [
   { value: "xlarge", label: "Très grand (> 15 kg)" },
 ];
 
-// Delivery point types are handled at the deal level, not parcel creation
+const DELIVERY_POINT_TYPES = [
+  { value: "public_place", label: "Lieu public" },
+  { value: "delivery_office", label: "Bureau de livraison" },
+  { value: "airport", label: "Aéroport" },
+  { value: "train_station", label: "Gare ferroviaire" },
+  { value: "bus_station", label: "Gare routière" },
+];
 
 export default function CreateParcel() {
   const navigate = useNavigate();
@@ -36,11 +42,27 @@ export default function CreateParcel() {
   const [reward, setReward] = useState("");
   const [contentDescription, setContentDescription] = useState("");
   const [notes, setNotes] = useState("");
+  const [deliveryPointAddress, setDeliveryPointAddress] = useState("");
+  const [deliveryPointType, setDeliveryPointType] = useState("");
   const [forbiddenAck, setForbiddenAck] = useState(false);
+
+  const normalizeSize = (value: string): "small" | "medium" | "large" => {
+    if (value === "medium") return "medium";
+    if (value === "large" || value === "xlarge") return "large";
+    return "small";
+  };
 
   const handleSubmit = async () => {
     if (!origin || !destination || !dateStart || !dateEnd || !category || !sizeWeight || !reward || !contentDescription.trim()) {
       toast({ title: "Champs requis", description: "Veuillez remplir tous les champs obligatoires.", variant: "destructive" });
+      return;
+    }
+    if (!deliveryPointAddress.trim() || !deliveryPointType) {
+      toast({
+        title: "Point de livraison requis",
+        description: "Ajoutez l'adresse et le type du point B (livraison).",
+        variant: "destructive",
+      });
       return;
     }
     if (!forbiddenAck) {
@@ -49,6 +71,17 @@ export default function CreateParcel() {
     }
     if (new Date(dateEnd) < new Date(dateStart)) {
       toast({ title: "Dates invalides", description: "La date de fin doit être après la date de début.", variant: "destructive" });
+      return;
+    }
+
+    const originWilaya = findWilayaByStoredName(origin);
+    const destinationWilaya = findWilayaByStoredName(destination);
+    if (!originWilaya || !destinationWilaya) {
+      toast({
+        title: "Wilayas invalides",
+        description: "Veuillez sélectionner des wilayas valides.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -74,19 +107,32 @@ export default function CreateParcel() {
     }
 
     const mergedNotes = `${contentDescription.trim()}\n${notes}`.trim();
+    const startIso = new Date(dateStart).toISOString();
+    const endIso = new Date(dateEnd).toISOString();
+    const rewardAmount = reward ? parseInt(reward, 10) : 0;
+    const normalizedSize = normalizeSize(sizeWeight);
 
     const { error } = await supabase.from("parcel_requests").insert({
+      sender_id: user.id,
       user_id: user.id,
-      origin_wilaya: origin,
-      destination_wilaya: destination,
-      date_window_start: new Date(dateStart).toISOString(),
-      date_window_end: new Date(dateEnd).toISOString(),
+      origin_wilaya: Number.parseInt(originWilaya.code, 10),
+      destination_wilaya: Number.parseInt(destinationWilaya.code, 10),
+      time_window_start: startIso,
+      time_window_end: endIso,
+      date_window_start: startIso,
+      date_window_end: endIso,
       category,
+      size: normalizedSize,
       size_weight: sizeWeight || null,
-      reward_dzd: reward ? parseInt(reward, 10) : 0,
+      reward_amount: rewardAmount,
+      reward_dzd: rewardAmount,
       notes: mergedNotes || null,
+      dropoff_place: deliveryPointAddress.trim(),
+      delivery_point_address: deliveryPointAddress.trim(),
+      delivery_point_type: deliveryPointType,
+      forbidden_ack: true,
       forbidden_items_acknowledged: true,
-    });
+    } as never);
 
     setLoading(false);
     if (error) {
@@ -163,8 +209,26 @@ export default function CreateParcel() {
           />
         </div>
 
+        <div className="space-y-2">
+          <Label>Point de livraison B *</Label>
+          <Input
+            placeholder="Adresse de remise (quartier, repère...)"
+            value={deliveryPointAddress}
+            onChange={(e) => setDeliveryPointAddress(e.target.value)}
+          />
+        </div>
 
-
+        <div className="space-y-2">
+          <Label>Type de point B *</Label>
+          <Select value={deliveryPointType} onValueChange={setDeliveryPointType}>
+            <SelectTrigger><SelectValue placeholder="Choisir un type" /></SelectTrigger>
+            <SelectContent>
+              {DELIVERY_POINT_TYPES.map((entry) => (
+                <SelectItem key={entry.value} value={entry.value}>{entry.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
 
         <div className="space-y-2">

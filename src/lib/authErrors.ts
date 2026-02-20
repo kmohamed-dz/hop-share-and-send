@@ -31,6 +31,12 @@ function resolveMappedDescription(rawMessage: string, language: AppLanguage): st
     return tLanguage(language, "auth.errors.weak_password");
   }
 
+  if (normalized.includes("invalid api key") || normalized.includes("apikey")) {
+    return language === "ar"
+      ? "إعدادات Supabase غير صحيحة. تحقق من VITE_SUPABASE_ANON_KEY."
+      : "Configuration Supabase invalide. Vérifiez VITE_SUPABASE_ANON_KEY.";
+  }
+
   return tLanguage(language, "auth.errors.generic");
 }
 

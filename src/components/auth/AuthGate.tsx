@@ -4,7 +4,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { LANGUAGE_STORAGE_KEY } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { isProfileRecordComplete } from "@/lib/authState";
 import { syncMarketplaceExpirations } from "@/lib/marketplace";
 import { fetchProfileByAuthUserId } from "@/lib/profile";
@@ -16,11 +16,15 @@ const ONBOARDING_ROLE_KEY = "maak_onboarding_role";
 
 const DASHBOARD_PATH = "/dashboard";
 const ONBOARDING_PATH = "/onboarding";
+const ONBOARDING_WELCOME_PATH = "/onboarding/welcome";
+const ONBOARDING_ROLE_PATH = "/onboarding/role";
 const LOGIN_PATH = "/login";
 const REGISTER_PATH = "/register";
 const FORGOT_PASSWORD_PATH = "/forgot-password";
 const CALLBACK_PATH = "/auth/callback";
 const UPDATE_PASSWORD_PATH = "/update-password";
+const PROFILE_SETUP_PATH = "/auth/profile-setup";
+const LEGACY_PROFILE_SETUP_PATH = "/profile/setup";
 
 const LEGACY_LOGIN_PATH = "/auth/login";
 const LEGACY_REGISTER_PATH = "/auth/signup";
@@ -36,6 +40,8 @@ const PUBLIC_PREFIXES = [
   FORGOT_PASSWORD_PATH,
   CALLBACK_PATH,
   UPDATE_PASSWORD_PATH,
+  ONBOARDING_WELCOME_PATH,
+  ONBOARDING_ROLE_PATH,
   LEGACY_LOGIN_PATH,
   LEGACY_REGISTER_PATH,
   LEGACY_FORGOT_PASSWORD_PATH,
@@ -67,6 +73,10 @@ function isProtectedPath(pathname: string): boolean {
   return true;
 }
 
+function isProfileSetupPath(pathname: string): boolean {
+  return pathname.startsWith(PROFILE_SETUP_PATH) || pathname.startsWith(LEGACY_PROFILE_SETUP_PATH);
+}
+
 function resolveAccessDeniedMessage(): string {
   const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
   return stored === "ar"
@@ -83,8 +93,8 @@ function isAdminProfile(profile: Record<string, unknown> | null): boolean {
     return true;
   }
 
-  const role = typeof profile.role === "string" ? profile.role : "";
-  return role === "school_admin" || role === "authority_admin";
+  const role = typeof profile.role === "string" ? profile.role.toLowerCase() : "";
+  return role === "admin";
 }
 
 export function AuthGate() {
@@ -180,7 +190,19 @@ export function AuthGate() {
         localStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, currentPath);
       }
 
-      if (!isPublicEntryPath(pathname)) {
+      const onboardingDone = localStorage.getItem(ONBOARDING_FLAG_KEY) === "true";
+
+      if (!onboardingDone && !isOnboardingPath(pathname)) {
+        navigate(ONBOARDING_WELCOME_PATH, { replace: true });
+        return;
+      }
+
+      if (onboardingDone && isOnboardingPath(pathname)) {
+        navigate(LOGIN_PATH, { replace: true });
+        return;
+      }
+
+      if (!isPublicEntryPath(pathname) && !isOnboardingPath(pathname)) {
         navigate(LOGIN_PATH, { replace: true });
       }
       return;
@@ -189,8 +211,8 @@ export function AuthGate() {
     localStorage.setItem(ONBOARDING_FLAG_KEY, "true");
 
     if (!computedProfileComplete) {
-      if (!isOnboardingPath(pathname)) {
-        navigate(ONBOARDING_PATH, { replace: true });
+      if (!isProfileSetupPath(pathname)) {
+        navigate(PROFILE_SETUP_PATH, { replace: true });
       }
       return;
     }
@@ -204,12 +226,18 @@ export function AuthGate() {
       return;
     }
 
-    if (isPublicEntryPath(pathname) || pathname === "/" || isOnboardingPath(pathname)) {
+    if (
+      isPublicEntryPath(pathname) ||
+      pathname === "/" ||
+      isOnboardingPath(pathname) ||
+      isProfileSetupPath(pathname)
+    ) {
       const redirectPath = localStorage.getItem(REDIRECT_AFTER_LOGIN_KEY);
       if (
         redirectPath &&
         isProtectedPath(redirectPath) &&
-        !isOnboardingPath(redirectPath)
+        !isOnboardingPath(redirectPath) &&
+        !isProfileSetupPath(redirectPath)
       ) {
         localStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
         if (redirectPath !== pathname) {

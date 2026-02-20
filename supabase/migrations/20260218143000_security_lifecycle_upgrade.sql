@@ -686,6 +686,7 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.verify_delivery_code(uuid, text);
 CREATE OR REPLACE FUNCTION public.verify_delivery_code(
   p_deal_id UUID,
   p_code TEXT

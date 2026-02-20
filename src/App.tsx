@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { AuthGate } from "@/components/auth/AuthGate";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -29,11 +29,12 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import AuthCallback from "@/pages/auth/AuthCallback";
 import ForgotPassword from "@/pages/auth/ForgotPassword";
 import Login from "@/pages/auth/Login";
-import Onboarding from "@/pages/auth/Onboarding";
 import ProfileSetup from "@/pages/auth/ProfileSetup";
 import ResetPassword from "@/pages/auth/ResetPassword";
 import Signup from "@/pages/auth/Signup";
 import VerifyEmail from "@/pages/auth/VerifyEmail";
+import RoleSelection from "@/pages/onboarding/RoleSelection";
+import Welcome from "@/pages/onboarding/Welcome";
 import CreateParcel from "@/pages/parcels/CreateParcel";
 import CreateTrip from "@/pages/trips/CreateTrip";
 import ProcessusContact from "@/pages/processus/ProcessusContact";
@@ -55,7 +56,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <HashRouter>
             <Routes>
               <Route element={<AuthGate />}>
                 <Route path="/login" element={<Login />} />
@@ -68,9 +69,11 @@ const App = () => (
                 <Route path="/auth/verify" element={<VerifyEmail />} />
                 <Route path="/auth/reset-password" element={<ResetPassword />} />
                 <Route path="/update-password" element={<ResetPassword />} />
-                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/onboarding" element={<Navigate to="/onboarding/welcome" replace />} />
+                <Route path="/onboarding/welcome" element={<Welcome />} />
+                <Route path="/onboarding/role" element={<RoleSelection />} />
                 <Route path="/auth/profile-setup" element={<ProfileSetup />} />
-                <Route path="/profile/setup" element={<Navigate to="/onboarding" replace />} />
+                <Route path="/profile/setup" element={<Navigate to="/auth/profile-setup" replace />} />
 
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -110,7 +113,7 @@ const App = () => (
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Route>
             </Routes>
-          </BrowserRouter>
+          </HashRouter>
         </TooltipProvider>
       </LanguageProvider>
     </QueryClientProvider>

@@ -7,7 +7,7 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAppLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { logTechnicalAuthError, toFriendlyAuthError } from "@/lib/authErrors";
 import { getHashRouteUrl } from "@/lib/publicUrl";
 import { toast } from "sonner";

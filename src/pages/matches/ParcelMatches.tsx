@@ -52,14 +52,16 @@ export default function ParcelMatches() {
         return;
       }
 
-      const travelerIds = Array.from(new Set(tripData.map((trip) => trip.user_id)));
+      const resolvedTravelerIds = Array.from(
+        new Set(tripData.map((trip) => (trip as Tables<"trips"> & { traveler_id?: string }).traveler_id ?? trip.user_id))
+      ).filter((value): value is string => Boolean(value));
       const ratingsByUser = new Map<string, number>();
 
-      if (travelerIds.length > 0) {
+      if (resolvedTravelerIds.length > 0) {
         const { data: profileRows } = await supabase
           .from("profile_public" as never)
           .select("user_id,rating_avg")
-          .in("user_id", travelerIds);
+          .in("user_id", resolvedTravelerIds);
 
         ((profileRows as ProfilePublicRow[] | null) ?? []).forEach((row) => {
           ratingsByUser.set(row.user_id, row.rating_avg ?? 3);
@@ -70,7 +72,8 @@ export default function ParcelMatches() {
         .map((trip) => ({
           ...trip,
           score: computeTripParcelScore(trip, parcelData, {
-            reputationAvg: ratingsByUser.get(trip.user_id) ?? 3,
+            reputationAvg:
+              ratingsByUser.get((trip as Tables<"trips"> & { traveler_id?: string }).traveler_id ?? trip.user_id) ?? 3,
           }),
         }))
         .filter((trip) => trip.score.total > 0)

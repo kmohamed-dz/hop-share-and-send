@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { syncMarketplaceExpirations } from "@/lib/marketplace";
+import { ACTIVE_PARCEL_STATUSES, syncMarketplaceExpirations } from "@/lib/marketplace";
 import { WILAYAS, PARCEL_CATEGORIES } from "@/data/wilayas";
 
 export default function SearchPage() {
@@ -33,7 +33,31 @@ export default function SearchPage() {
       const byArabicName = entry.name_ar.toLowerCase().includes(q);
       const byCode = entry.code.includes(q);
       return byFrenchName || byArabicName || byCode;
-    }).map((entry) => entry.name_fr);
+    });
+
+    const matchingCodeSet = new Set(
+      matchingWilayas.map((entry) => Number.parseInt(entry.code, 10)).filter((value) => Number.isInteger(value))
+    );
+    const matchingNameSet = new Set(
+      matchingWilayas.flatMap((entry) => [entry.name_fr.toLowerCase(), entry.name_ar.toLowerCase()])
+    );
+
+    const matchesWilaya = (value: unknown): boolean => {
+      const normalized = String(value ?? "").trim().toLowerCase();
+      if (!normalized) return false;
+
+      if (matchingNameSet.has(normalized)) {
+        return true;
+      }
+
+      const parsed = Number.parseInt(normalized, 10);
+      if (!Number.isNaN(parsed) && matchingCodeSet.has(parsed)) {
+        return true;
+      }
+
+      const padded = normalized.padStart(2, "0");
+      return Array.from(matchingCodeSet).some((code) => String(code).padStart(2, "0") === padded);
+    };
 
     const fetchData = async () => {
       await syncMarketplaceExpirations();
@@ -41,23 +65,18 @@ export default function SearchPage() {
 
       if (tab === "trips") {
         if (matchingWilayas.length > 0) {
-          // Search by origin or destination wilaya
           const { data } = await supabase
             .from("trips")
             .select("*")
             .eq("status", "active")
             .gte("departure_date", nowIso)
-            .or(
-              matchingWilayas
-                .flatMap((w) => [
-                  `origin_wilaya.ilike.%${w}%`,
-                  `destination_wilaya.ilike.%${w}%`,
-                ])
-                .join(",")
-            )
             .order("departure_date", { ascending: true })
-            .limit(20);
-          setTrips(data ?? []);
+            .limit(200);
+
+          const filtered = (data ?? []).filter(
+            (trip) => matchesWilaya(trip.origin_wilaya) || matchesWilaya(trip.destination_wilaya)
+          );
+          setTrips(filtered.slice(0, 20));
         } else {
           setTrips([]);
         }
@@ -66,19 +85,15 @@ export default function SearchPage() {
           const { data } = await supabase
             .from("parcel_requests")
             .select("*")
-            .eq("status", "active")
+            .in("status", [...ACTIVE_PARCEL_STATUSES])
             .gte("date_window_end", nowIso)
-            .or(
-              matchingWilayas
-                .flatMap((w) => [
-                  `origin_wilaya.ilike.%${w}%`,
-                  `destination_wilaya.ilike.%${w}%`,
-                ])
-                .join(",")
-            )
             .order("created_at", { ascending: false })
-            .limit(20);
-          setParcels(data ?? []);
+            .limit(200);
+
+          const filtered = (data ?? []).filter(
+            (parcel) => matchesWilaya(parcel.origin_wilaya) || matchesWilaya(parcel.destination_wilaya)
+          );
+          setParcels(filtered.slice(0, 20));
         } else {
           setParcels([]);
         }

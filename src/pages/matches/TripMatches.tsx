@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { syncMarketplaceExpirations } from "@/lib/marketplace";
+import { ACTIVE_PARCEL_STATUSES, syncMarketplaceExpirations } from "@/lib/marketplace";
 import { computeTripParcelScore, type MatchScore } from "@/lib/matching";
 import { toast } from "sonner";
 
@@ -39,7 +39,11 @@ export default function TripMatches() {
 
       const [tripRes, parcelsRes] = await Promise.all([
         supabase.from("trips").select("*").eq("id", tripId).maybeSingle(),
-        supabase.from("parcel_requests").select("*").eq("status", "active").gte("date_window_end", nowIso),
+        supabase
+          .from("parcel_requests")
+          .select("*")
+          .in("status", [...ACTIVE_PARCEL_STATUSES])
+          .gte("date_window_end", nowIso),
       ]);
 
       const tripData = tripRes.data;
@@ -52,7 +56,9 @@ export default function TripMatches() {
         return;
       }
 
-      const ownerIds = Array.from(new Set(parcelsData.map((entry) => entry.user_id)));
+      const ownerIds = Array.from(
+        new Set(parcelsData.map((entry) => (entry as Tables<"parcel_requests"> & { sender_id?: string }).sender_id ?? entry.user_id))
+      ).filter((value): value is string => Boolean(value));
       const ratingsByUser = new Map<string, number>();
 
       if (ownerIds.length > 0) {
@@ -70,7 +76,10 @@ export default function TripMatches() {
         .map((parcel) => ({
           ...parcel,
           score: computeTripParcelScore(tripData, parcel, {
-            reputationAvg: ratingsByUser.get(parcel.user_id) ?? 3,
+            reputationAvg:
+              ratingsByUser.get(
+                (parcel as Tables<"parcel_requests"> & { sender_id?: string }).sender_id ?? parcel.user_id
+              ) ?? 3,
           }),
         }))
         .filter((parcel) => parcel.score.total > 0)

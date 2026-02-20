@@ -1,4 +1,70 @@
 -- ============================================================================
+-- MAAK | One-click reset + full backend apply
+-- WARNING: This drops legacy app tables in public schema before re-creating.
+-- ============================================================================
+
+-- ============================================================================
+-- CLEANUP_LEGACY_SCHEMA.sql
+-- Remove legacy schema objects before applying MAAK backend.
+-- WARNING: This removes data from legacy tables.
+-- ============================================================================
+
+-- Storage policy cleanup (legacy naming)
+do $cleanup_storage$
+begin
+  execute 'drop policy if exists library_select_school_folder on storage.objects';
+  execute 'drop policy if exists library_insert_school_staff on storage.objects';
+  execute 'drop policy if exists library_update_school_staff on storage.objects';
+  execute 'drop policy if exists library_delete_school_staff on storage.objects';
+  execute 'drop policy if exists avatars_select_authenticated on storage.objects';
+exception
+  when insufficient_privilege then
+    raise notice 'Skipped legacy storage policy cleanup (insufficient privilege on storage.objects).';
+  when undefined_table then
+    raise notice 'storage.objects unavailable, skipping legacy storage policy cleanup.';
+end;
+$cleanup_storage$;
+
+-- Drop existing MAAK tables/views (reset)
+drop view if exists public.profile_public cascade;
+drop table if exists public.handoff_proofs cascade;
+drop table if exists public.delivery_codes cascade;
+drop table if exists public.deal_delivery_codes cascade;
+drop table if exists public.messages cascade;
+drop table if exists public.ratings cascade;
+drop table if exists public.reports cascade;
+drop table if exists public.blocked_users cascade;
+drop table if exists public.user_settings cascade;
+drop table if exists public.private_contacts cascade;
+drop table if exists public.deals cascade;
+drop table if exists public.parcel_requests cascade;
+drop table if exists public.trips cascade;
+drop table if exists public.profiles cascade;
+
+-- Drop conflicting legacy tables
+drop table if exists public.library cascade;
+drop table if exists public.notifications cascade;
+drop table if exists public.results cascade;
+drop table if exists public.exams cascade;
+drop table if exists public.homework cascade;
+drop table if exists public.attendance cascade;
+drop table if exists public.teachers cascade;
+drop table if exists public.students cascade;
+drop table if exists public.schools cascade;
+
+-- Old helper functions (after dropping dependent tables/policies)
+drop function if exists public.authority_school_overview() cascade;
+drop function if exists public.resolve_school_id_by_code(text) cascade;
+drop function if exists public.can_manage_school_data() cascade;
+drop function if exists public.current_school_id() cascade;
+drop function if exists public.generate_delivery_code_trigger() cascade;
+drop function if exists public.generate_delivery_code() cascade;
+drop function if exists public.verify_delivery_code(uuid, text) cascade;
+
+-- Optional: remove old `library` bucket manually from Storage UI if needed.
+-- Supabase blocks direct SQL deletion from storage tables.
+
+-- ============================================================================
 -- MAAK | Supabase Full Setup (Generated from supabase/migrations)
 -- ============================================================================
 -- This file is generated from migration files in timestamp order.
@@ -2425,3 +2491,58 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+-- ============================================================================
+-- MAAK | Storage policies for handoff proofs
+-- ============================================================================
+-- Run this file if you need to (re)apply storage policies only.
+
+insert into storage.buckets (id, name, public)
+values ('handoff_proofs', 'handoff_proofs', false)
+on conflict (id) do nothing;
+
+do $storage_policies$
+begin
+  execute 'alter table storage.objects enable row level security';
+
+  execute 'drop policy if exists "Users can upload handoff proofs" on storage.objects';
+  execute '
+    create policy "Users can upload handoff proofs"
+    on storage.objects
+    for insert
+    to authenticated
+    with check (
+      bucket_id = ''handoff_proofs''
+      and owner = auth.uid()
+      and exists (
+        select 1
+        from public.deals d
+        where d.id::text = split_part(name, ''/'', 1)
+          and (d.traveler_user_id = auth.uid() or d.owner_user_id = auth.uid())
+      )
+    )
+  ';
+
+  execute 'drop policy if exists "Deal participants can read handoff proofs files" on storage.objects';
+  execute '
+    create policy "Deal participants can read handoff proofs files"
+    on storage.objects
+    for select
+    to authenticated
+    using (
+      bucket_id = ''handoff_proofs''
+      and exists (
+        select 1
+        from public.deals d
+        where d.id::text = split_part(name, ''/'', 1)
+          and (d.traveler_user_id = auth.uid() or d.owner_user_id = auth.uid())
+      )
+    )
+  ';
+exception
+  when insufficient_privilege then
+    raise notice 'Skipped storage.objects policies (insufficient privilege). Configure them in Storage -> Policies.';
+  when undefined_table then
+    raise notice 'storage.objects not available yet. Configure policies from Storage -> Policies.';
+end;
+$storage_policies$;

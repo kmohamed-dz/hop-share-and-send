@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { PARCEL_CATEGORIES } from "@/data/wilayas";
-import { syncMarketplaceExpirations } from "@/lib/marketplace";
+import { ACTIVE_PARCEL_STATUSES, syncMarketplaceExpirations } from "@/lib/marketplace";
 
 export default function BrowseParcels() {
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ export default function BrowseParcels() {
       const { data } = await supabase
         .from("parcel_requests")
         .select("*")
-        .eq("status", "active")
+        .in("status", [...ACTIVE_PARCEL_STATUSES])
         .gte("date_window_end", nowIso)
         .order("created_at", { ascending: false });
       setParcels(data ?? []);

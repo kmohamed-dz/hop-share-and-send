@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { WilayaSelect } from "@/components/WilayaSelect";
-import { PARCEL_CATEGORIES } from "@/data/wilayas";
+import { findWilayaByStoredName, PARCEL_CATEGORIES } from "@/data/wilayas";
 import { supabase } from "@/integrations/supabase/client";
 import { currentUserHasOpenDeal, syncMarketplaceExpirations } from "@/lib/marketplace";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +35,17 @@ export default function CreateTrip() {
       return;
     }
 
+    const originWilaya = findWilayaByStoredName(origin);
+    const destinationWilaya = findWilayaByStoredName(destination);
+    if (!originWilaya || !destinationWilaya) {
+      toast({
+        title: "Wilayas invalides",
+        description: "Veuillez sélectionner des wilayas valides.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     await syncMarketplaceExpirations();
 
@@ -56,14 +67,19 @@ export default function CreateTrip() {
       return;
     }
 
+    const departureIso = new Date(departureDate).toISOString();
     const { error } = await supabase.from("trips").insert({
+      traveler_id: user.id,
       user_id: user.id,
-      origin_wilaya: origin,
-      destination_wilaya: destination,
-      departure_date: new Date(departureDate).toISOString(),
+      origin_wilaya: Number.parseInt(originWilaya.code, 10),
+      destination_wilaya: Number.parseInt(destinationWilaya.code, 10),
+      departure_time: departureIso,
+      departure_date: departureIso,
+      capacity: capacityNote || null,
       capacity_note: capacityNote || null,
+      categories,
       accepted_categories: categories,
-    });
+    } as never);
 
     setLoading(false);
     if (error) {

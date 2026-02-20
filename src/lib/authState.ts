@@ -11,6 +11,24 @@ export function isEmailVerifiedSession(session: Session | null): boolean {
 export function isProfileRecordComplete(profile: Record<string, unknown> | null): boolean {
   if (!profile) return false;
 
-  const schoolId = typeof profile.school_id === "string" ? profile.school_id.trim() : "";
-  return Boolean(schoolId);
+  if (profile.profile_complete === true) {
+    return true;
+  }
+
+  const fullName =
+    typeof profile.full_name === "string"
+      ? profile.full_name.trim()
+      : typeof profile.name === "string"
+        ? profile.name.trim()
+        : "";
+  const rolePreference =
+    typeof profile.role_preference === "string"
+      ? profile.role_preference.trim()
+      : typeof profile.role_pref === "string"
+        ? profile.role_pref.trim()
+        : typeof profile.role === "string"
+          ? profile.role.trim()
+          : "";
+
+  return Boolean(fullName && rolePreference);
 }

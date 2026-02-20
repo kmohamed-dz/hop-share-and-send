@@ -30,9 +30,15 @@ function computeDateProximityScore(dateDistanceDays: number, timeMatch: boolean)
 }
 
 function computeCapacityScore(trip: Tables<"trips">, parcel: Tables<"parcel_requests">): number {
-  const categoryCompatible = trip.accepted_categories?.includes(parcel.category) ?? false;
-  const note = (trip.capacity_note ?? "").toLowerCase();
-  const size = (parcel.size_weight ?? "").toLowerCase();
+  const tripCategories =
+    (trip as Tables<"trips"> & { categories?: string[] | null }).categories ?? trip.accepted_categories ?? [];
+  const categoryCompatible = tripCategories.includes(parcel.category);
+  const note = (
+    (trip as Tables<"trips"> & { capacity?: string | null }).capacity ?? trip.capacity_note ?? ""
+  ).toLowerCase();
+  const size = (
+    (parcel as Tables<"parcel_requests"> & { size?: string | null }).size ?? parcel.size_weight ?? ""
+  ).toLowerCase();
 
   let sizeCompatibility = 4;
 
@@ -71,16 +77,27 @@ export function computeTripParcelScore(
   const originMatch = trip.origin_wilaya === parcel.origin_wilaya;
   const destinationMatch = trip.destination_wilaya === parcel.destination_wilaya;
 
-  const depDate = new Date(trip.departure_date);
-  const start = new Date(parcel.date_window_start);
-  const end = new Date(parcel.date_window_end);
+  const departureIso =
+    (trip as Tables<"trips"> & { departure_time?: string | null }).departure_time ?? trip.departure_date;
+  const windowStartIso =
+    (parcel as Tables<"parcel_requests"> & { time_window_start?: string | null }).time_window_start ??
+    parcel.date_window_start;
+  const windowEndIso =
+    (parcel as Tables<"parcel_requests"> & { time_window_end?: string | null }).time_window_end ??
+    parcel.date_window_end;
+
+  const depDate = new Date(departureIso);
+  const start = new Date(windowStartIso);
+  const end = new Date(windowEndIso);
   const timeMatch = depDate >= start && depDate <= end;
   const dateFlexible = !timeMatch;
 
   const dateDistanceDays = getDateDistanceInDays(depDate, start, end);
   const dateProximityScore = computeDateProximityScore(dateDistanceDays, timeMatch);
 
-  const categoryMatch = trip.accepted_categories?.includes(parcel.category) ?? false;
+  const tripCategories =
+    (trip as Tables<"trips"> & { categories?: string[] | null }).categories ?? trip.accepted_categories ?? [];
+  const categoryMatch = tripCategories.includes(parcel.category);
   const capacityScore = computeCapacityScore(trip, parcel);
   const reputationScore = computeReputationScore(options.reputationAvg);
 

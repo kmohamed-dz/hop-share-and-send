@@ -1,1 +1,1 @@
-export { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+export { supabase } from "@/lib/supabaseClient";
