@@ -103,8 +103,9 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Manrope', 'Segoe UI', sans-serif;
     direction: ltr;
+    text-align: start;
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -117,13 +118,17 @@
 
   html[dir="rtl"] input,
   html[dir="rtl"] textarea {
-    text-align: right;
+    text-align: start;
+  }
+
+  html[dir="rtl"] .mobile-header {
+    flex-direction: row-reverse;
   }
 }
 
 @layer utilities {
   .maak-shell {
-    @apply mx-auto w-full max-w-md px-4;
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
   }
 
   .maak-secondary-link {
@@ -136,16 +141,32 @@
   .safe-top {
     padding-top: env(safe-area-inset-top, 0px);
   }
+
+  .rtl-flip {
+    transform: none;
+  }
+
+  html[dir="rtl"] .rtl-flip {
+    transform: rotate(180deg);
+  }
+
+  .logical-inline-start {
+    margin-inline-start: auto;
+  }
+
+  .logical-inline-end {
+    margin-inline-end: auto;
+  }
 }
 
 
 @layer components {
   .mobile-page {
-    @apply mx-auto w-full max-w-md px-4 pt-6 pb-24 safe-top;
+    @apply mx-auto w-full max-w-6xl px-4 pt-6 pb-24 safe-top sm:px-6;
   }
 
   .mobile-header {
-    @apply flex items-center gap-3 pb-4;
+    @apply flex items-center gap-3 pb-2;
   }
 
   .mobile-title {
@@ -153,11 +174,11 @@
   }
 
   .maak-card {
-    @apply rounded-2xl border border-border/80 bg-card shadow-sm;
+    @apply rounded-3xl border border-border/80 bg-card shadow-[0_14px_30px_-24px_hsl(var(--foreground)/0.45)];
   }
 
   .maak-card-soft {
-    @apply rounded-2xl border border-primary/20 bg-primary/5 shadow-sm;
+    @apply rounded-3xl border border-primary/20 bg-primary/5 shadow-[0_14px_30px_-24px_hsl(var(--primary)/0.75)];
   }
 
   .maak-section-title {
@@ -165,6 +186,6 @@
   }
 
   .maak-primary-btn {
-    @apply h-14 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90;
+    @apply h-12 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90;
   }
 }

@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Route, Clock, AlertCircle } from "lucide-react";
+import { ArrowLeft, Route, Clock, AlertCircle, CalendarClock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { useAppLanguage } from "@/contexts/LanguageContext";
-import { syncMarketplaceExpirations } from "@/lib/marketplace";
+import { ACTIVE_PARCEL_STATUSES, syncMarketplaceExpirations, TRIP_ACTIVE_STATUSES } from "@/lib/marketplace";
 
 export default function BrowseTrips() {
   const navigate = useNavigate();
@@ -26,7 +26,7 @@ export default function BrowseTrips() {
         supabase
           .from("trips")
           .select("*")
-          .eq("status", "active")
+          .in("status", [...TRIP_ACTIVE_STATUSES])
           .gte("departure_date", nowIso)
           .order("departure_date", { ascending: true }),
         authData.user
@@ -34,7 +34,7 @@ export default function BrowseTrips() {
               .from("parcel_requests")
               .select("*")
               .eq("user_id", authData.user.id)
-              .eq("status", "active")
+              .in("status", [...ACTIVE_PARCEL_STATUSES])
           : Promise.resolve({ data: [] }),
       ]);
 
@@ -46,7 +46,6 @@ export default function BrowseTrips() {
 
   const hasDateMismatch = (trip: Tables<"trips">) => {
     if (myParcels.length === 0) return false;
-    const tripDate = new Date(trip.departure_date).toDateString();
     return !myParcels.some((p) => {
       const start = new Date(p.date_window_start);
       const end = new Date(p.date_window_end);
@@ -56,13 +55,23 @@ export default function BrowseTrips() {
   };
 
   return (
-    <div className="px-4 safe-top pb-24">
-      <div className="pt-6 pb-4 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-1"><ArrowLeft className="h-5 w-5" /></button>
+    <div className="mobile-page space-y-4">
+      <div className="mobile-header">
+        <button onClick={() => navigate(-1)} className="rounded-full p-1.5 hover:bg-muted/80">
+          <ArrowLeft className="h-5 w-5" />
+        </button>
         <h1 className="text-xl font-bold">
           {language === "ar" ? "الرحلات المتاحة" : "Trajets disponibles"}
         </h1>
       </div>
+      <Card className="maak-card-soft p-3 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <CalendarClock className="h-4 w-4 text-primary" />
+          {language === "ar"
+            ? "حتى مع اختلاف التاريخ، يمكنك طلب النقل إذا كنت مرنًا."
+            : "Même avec une date différente, vous pouvez demander le transport si vous êtes flexible."}
+        </div>
+      </Card>
       {loading ? (
         <p className="text-center text-sm text-muted-foreground py-12">
           {language === "ar" ? "جار التحميل..." : "Chargement..."}
@@ -72,16 +81,16 @@ export default function BrowseTrips() {
           {language === "ar" ? "لا توجد رحلات متاحة" : "Aucun trajet disponible"}
         </p>
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-3 md:grid-cols-2">
           {trips.map((trip) => {
             const mismatch = hasDateMismatch(trip);
             return (
               <Card
                 key={trip.id}
-                className="p-3.5 cursor-pointer hover:bg-muted/30"
+                className="maak-card p-4 cursor-pointer transition-colors hover:bg-muted/25"
                 onClick={() => navigate(`/browse/trips/${trip.id}`)}
               >
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-2">
                   <Route className="h-4 w-4 text-primary" />
                   <span className="font-semibold text-sm">{trip.origin_wilaya} → {trip.destination_wilaya}</span>
                 </div>
@@ -93,8 +102,8 @@ export default function BrowseTrips() {
                 </p>
                 {trip.accepted_categories && trip.accepted_categories.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {trip.accepted_categories.map((c) => (
-                      <span key={c} className="text-xs px-1.5 py-0.5 rounded bg-muted">{c}</span>
+                    {trip.accepted_categories.slice(0, 4).map((c) => (
+                      <span key={c} className="text-xs px-1.5 py-0.5 rounded-full bg-muted">{c}</span>
                     ))}
                   </div>
                 )}
@@ -106,6 +115,9 @@ export default function BrowseTrips() {
                       : "Dates différentes — demande possible si vous êtes flexible."}
                   </div>
                 )}
+                <Button className="mt-3 w-full" size="sm" variant="outline">
+                  {language === "ar" ? "عرض التفاصيل" : "Voir le détail"}
+                </Button>
               </Card>
             );
           })}

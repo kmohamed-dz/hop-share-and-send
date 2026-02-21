@@ -110,7 +110,7 @@ const App = () => (
                 <Route path="/admin/deals" element={<AdminDeals />} />
                 <Route path="/admin/messages" element={<AdminMessages />} />
 
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>
           </HashRouter>

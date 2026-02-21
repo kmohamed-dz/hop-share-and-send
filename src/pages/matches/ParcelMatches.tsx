@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { syncMarketplaceExpirations } from "@/lib/marketplace";
+import { syncMarketplaceExpirations, TRIP_ACTIVE_STATUSES } from "@/lib/marketplace";
 import { computeTripParcelScore, type MatchScore } from "@/lib/matching";
 import { toast } from "sonner";
 
@@ -28,6 +28,47 @@ export default function ParcelMatches() {
   const [showInfo, setShowInfo] = useState(false);
   const [safetyOpen, setSafetyOpen] = useState(false);
 
+  const openExistingDeal = async (tripId: string): Promise<boolean> => {
+    if (!parcelId) return false;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { data: samePairDeals } = await supabase
+      .from("deals")
+      .select("id,status,trip_id,parcel_request_id,created_at")
+      .or(`owner_user_id.eq.${user.id},traveler_user_id.eq.${user.id}`)
+      .eq("trip_id", tripId)
+      .eq("parcel_request_id", parcelId)
+      .not("status", "in", "(closed,cancelled,expired)")
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    const exactDeal = (samePairDeals as { id: string }[] | null)?.[0];
+    if (exactDeal?.id) {
+      toast.info("Deal déjà existant. Ouverture du deal actif.");
+      navigate(`/deals/${exactDeal.id}`);
+      return true;
+    }
+
+    const { data: activeDeals } = await supabase
+      .from("deals")
+      .select("id,status,created_at")
+      .or(`owner_user_id.eq.${user.id},traveler_user_id.eq.${user.id}`)
+      .not("status", "in", "(closed,cancelled,expired)")
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    const activeDeal = (activeDeals as { id: string }[] | null)?.[0];
+    if (!activeDeal?.id) return false;
+
+    toast.info("Vous avez déjà un deal actif. Terminez-le ou ouvrez-le pour continuer.");
+    navigate(`/deals/${activeDeal.id}`);
+    return true;
+  };
+
   useEffect(() => {
     if (!parcelId) return;
 
@@ -38,7 +79,7 @@ export default function ParcelMatches() {
 
       const [parcelRes, tripsRes] = await Promise.all([
         supabase.from("parcel_requests").select("*").eq("id", parcelId).maybeSingle(),
-        supabase.from("trips").select("*").eq("status", "active").gte("departure_date", nowIso),
+        supabase.from("trips").select("*").in("status", [...TRIP_ACTIVE_STATUSES]).gte("departure_date", nowIso),
       ]);
 
       const parcelData = parcelRes.data;
@@ -93,6 +134,10 @@ export default function ParcelMatches() {
     } as never);
 
     if (error) {
+      if (/deal actif existe déjà/i.test(error.message)) {
+        const opened = await openExistingDeal(trip.id);
+        if (opened) return;
+      }
       toast.error(error.message);
       return;
     }

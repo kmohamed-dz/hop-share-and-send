@@ -12,6 +12,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { currentUserHasOpenDeal, syncMarketplaceExpirations } from "@/lib/marketplace";
 import { useToast } from "@/hooks/use-toast";
 
+function extractMissingSchemaColumn(errorMessage: string): string | null {
+  const match = /Could not find the '([^']+)' column of '[^']+' in the schema cache/i.exec(errorMessage);
+  return match?.[1] ?? null;
+}
+
+function toLocalDateTimeInputValue(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export default function CreateTrip() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -30,8 +40,12 @@ export default function CreateTrip() {
   };
 
   const handleSubmit = async () => {
-    if (!origin || !destination || !departureDate) {
+    if (!origin || !destination || !departureDate || !capacityNote.trim()) {
       toast({ title: "Champs requis", description: "Veuillez remplir tous les champs obligatoires.", variant: "destructive" });
+      return;
+    }
+    if (categories.length === 0) {
+      toast({ title: "Catégories requises", description: "Sélectionnez au moins une catégorie acceptée.", variant: "destructive" });
       return;
     }
 
@@ -41,6 +55,22 @@ export default function CreateTrip() {
       toast({
         title: "Wilayas invalides",
         description: "Veuillez sélectionner des wilayas valides.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const departureLocal = new Date(departureDate);
+    if (Number.isNaN(departureLocal.getTime())) {
+      toast({ title: "Date invalide", description: "Veuillez choisir une date valide.", variant: "destructive" });
+      return;
+    }
+
+    const minFutureMs = Date.now() + 5 * 60 * 1000;
+    if (departureLocal.getTime() < minFutureMs) {
+      toast({
+        title: "Date de départ trop proche",
+        description: "Choisissez un départ au moins 5 minutes dans le futur.",
         variant: "destructive",
       });
       return;
@@ -67,23 +97,50 @@ export default function CreateTrip() {
       return;
     }
 
-    const departureIso = new Date(departureDate).toISOString();
-    const { error } = await supabase.from("trips").insert({
+    const departureIso = departureLocal.toISOString();
+    const basePayload: Record<string, unknown> = {
       traveler_id: user.id,
       user_id: user.id,
       origin_wilaya: Number.parseInt(originWilaya.code, 10),
       destination_wilaya: Number.parseInt(destinationWilaya.code, 10),
       departure_time: departureIso,
       departure_date: departureIso,
-      capacity: capacityNote || null,
-      capacity_note: capacityNote || null,
+      capacity: capacityNote.trim(),
+      capacity_note: capacityNote.trim(),
       categories,
       accepted_categories: categories,
-    } as never);
+    };
+
+    const removableColumns = new Set([
+      "capacity",
+      "traveler_id",
+      "departure_time",
+      "categories",
+    ]);
+
+    const payload = { ...basePayload };
+    let errorMessage: string | null = null;
+
+    for (let attempt = 0; attempt < removableColumns.size + 1; attempt += 1) {
+      const { error } = await supabase.from("trips").insert(payload as never);
+      if (!error) {
+        errorMessage = null;
+        break;
+      }
+
+      const missingColumn = extractMissingSchemaColumn(error.message);
+      if (!missingColumn || !removableColumns.has(missingColumn) || !(missingColumn in payload)) {
+        errorMessage = error.message;
+        break;
+      }
+
+      delete payload[missingColumn];
+      errorMessage = error.message;
+    }
 
     setLoading(false);
-    if (error) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    if (errorMessage) {
+      toast({ title: "Erreur", description: errorMessage, variant: "destructive" });
     } else {
       toast({ title: "Trajet publié !" });
       navigate("/activity");
@@ -116,12 +173,12 @@ export default function CreateTrip() {
             type="datetime-local"
             value={departureDate}
             onChange={(e) => setDepartureDate(e.target.value)}
-            min={new Date().toISOString().slice(0, 16)}
+            min={toLocalDateTimeInputValue(new Date())}
           />
         </div>
 
         <div className="space-y-2">
-          <Label>Catégories acceptées</Label>
+          <Label>Catégories acceptées *</Label>
           <div className="grid grid-cols-2 gap-2">
             {PARCEL_CATEGORIES.map((cat) => (
               <label
@@ -139,7 +196,7 @@ export default function CreateTrip() {
         </div>
 
         <div className="space-y-2">
-          <Label>Note sur l'espace disponible</Label>
+          <Label>Capacité disponible *</Label>
           <Textarea
             placeholder="Ex: place pour un petit sac à dos"
             value={capacityNote}

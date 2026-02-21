@@ -4,6 +4,7 @@ import { ArrowLeft, Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAppLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { isChatUnlocked, syncMarketplaceExpirations } from "@/lib/marketplace";
@@ -12,6 +13,7 @@ import { toast } from "sonner";
 export default function DealChat() {
   const { dealId } = useParams<{ dealId: string }>();
   const navigate = useNavigate();
+  const { isRTL } = useAppLanguage();
   const [deal, setDeal] = useState<Tables<"deals"> | null>(null);
   const [messages, setMessages] = useState<Tables<"messages">[]>([]);
   const [text, setText] = useState("");
@@ -60,18 +62,29 @@ export default function DealChat() {
   return (
     <div className="mobile-page space-y-3">
       <div className="mobile-header">
-        <button onClick={() => navigate(-1)} className="p-1"><ArrowLeft className="h-5 w-5" /></button>
+        <button onClick={() => navigate(-1)} className="p-1">
+          <ArrowLeft className={`h-5 w-5 ${isRTL ? "rotate-180" : ""}`} />
+        </button>
         <h1 className="maak-section-title">Chat du deal</h1>
       </div>
 
-      {!canChat && <p className="text-sm text-muted-foreground">Contact disponible après acceptation des deux parties.</p>}
+      {!canChat && <p className="text-sm text-muted-foreground">Contact débloqué après acceptation mutuelle.</p>}
 
       <div className="space-y-2">
-        {messages.map((m) => (
-          <div key={m.id} className={`rounded-2xl p-3 text-sm ${m.sender_id === myId ? "bg-primary text-primary-foreground ml-8" : "bg-card border border-border mr-8"}`}>
-            {m.content}
-          </div>
-        ))}
+        {messages.map((m) => {
+          const mine = m.sender_id === myId;
+          return (
+            <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+              <div
+                className={`max-w-[84%] rounded-2xl px-3 py-2 text-sm ${
+                  mine ? "bg-primary text-primary-foreground" : "border border-border bg-card"
+                }`}
+              >
+                {m.content}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="fixed bottom-20 left-0 right-0 px-4">

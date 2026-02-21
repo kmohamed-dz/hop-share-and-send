@@ -19,7 +19,15 @@ export default function Messages() {
       const { data } = await supabase
         .from("deals")
         .select("*")
-        .in("status", ["mutually_accepted", "picked_up", "delivered_confirmed", "closed"])
+        .in("status", [
+          "mutually_accepted",
+          "pickup_location_selected",
+          "pickup_location_confirmed",
+          "picked_up",
+          "in_transit",
+          "delivered",
+          "closed",
+        ])
         .order("updated_at", { ascending: false });
       setDeals((data as DealExt[]) ?? []);
     })();
@@ -36,8 +44,8 @@ export default function Messages() {
           <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
             <MessageCircle className="h-7 w-7 text-muted-foreground" />
           </div>
-          <p className="font-medium">Aucun deal accepté</p>
-          <p className="text-sm text-muted-foreground mt-1">Le chat est activé après acceptation mutuelle.</p>
+          <p className="font-medium">Aucune conversation active</p>
+          <p className="text-sm text-muted-foreground mt-1">Contact débloqué après acceptation mutuelle.</p>
         </div>
       ) : (
         <div className="space-y-3">

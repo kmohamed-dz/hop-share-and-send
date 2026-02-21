@@ -29,6 +29,47 @@ export default function TripMatches() {
   const [showInfo, setShowInfo] = useState(false);
   const [safetyOpen, setSafetyOpen] = useState(false);
 
+  const openExistingDeal = async (parcelRequestId: string): Promise<boolean> => {
+    if (!tripId) return false;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { data: samePairDeals } = await supabase
+      .from("deals")
+      .select("id,status,trip_id,parcel_request_id,created_at")
+      .or(`owner_user_id.eq.${user.id},traveler_user_id.eq.${user.id}`)
+      .eq("trip_id", tripId)
+      .eq("parcel_request_id", parcelRequestId)
+      .not("status", "in", "(closed,cancelled,expired)")
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    const exactDeal = (samePairDeals as { id: string }[] | null)?.[0];
+    if (exactDeal?.id) {
+      toast.info("Deal déjà existant. Ouverture du deal actif.");
+      navigate(`/deals/${exactDeal.id}`);
+      return true;
+    }
+
+    const { data: activeDeals } = await supabase
+      .from("deals")
+      .select("id,status,created_at")
+      .or(`owner_user_id.eq.${user.id},traveler_user_id.eq.${user.id}`)
+      .not("status", "in", "(closed,cancelled,expired)")
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    const activeDeal = (activeDeals as { id: string }[] | null)?.[0];
+    if (!activeDeal?.id) return false;
+
+    toast.info("Vous avez déjà un deal actif. Terminez-le ou ouvrez-le pour continuer.");
+    navigate(`/deals/${activeDeal.id}`);
+    return true;
+  };
+
   useEffect(() => {
     if (!tripId) return;
 
@@ -99,6 +140,10 @@ export default function TripMatches() {
     } as never);
 
     if (error) {
+      if (/deal actif existe déjà/i.test(error.message)) {
+        const opened = await openExistingDeal(parcel.id);
+        if (opened) return;
+      }
       toast.error(error.message);
       return;
     }

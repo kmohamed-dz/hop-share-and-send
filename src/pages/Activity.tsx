@@ -103,9 +103,10 @@ function ParcelCard({ parcel, onCancel, lang }: { parcel: Tables<"parcel_request
 }
 
 function DealCard({ deal, myUserId, lang, navigate }: { deal: Tables<"deals">; myUserId: string; lang: string; navigate: (path: string) => void }) {
-  const isSender = deal.owner_user_id === myUserId;
+  const senderId = (deal as Tables<"deals"> & { sender_id?: string | null }).sender_id ?? deal.owner_user_id;
+  const isSender = senderId === myUserId;
   const roleLabel = isSender ? (lang === "ar" ? "مرسل" : "Expéditeur") : (lang === "ar" ? "ناقل" : "Transporteur");
-  const closed = ["closed", "delivered"].includes(deal.status);
+  const closed = ["closed", "delivered", "cancelled", "expired"].includes(deal.status);
 
   return (
     <Card className="p-3.5 cursor-pointer hover:bg-muted/30" onClick={() => navigate(`/deals/${deal.id}`)}>
@@ -171,8 +172,8 @@ export default function Activity() {
   const historyTrips = trips.filter((t) => t.status !== "active");
   const activeParcels = parcels.filter((p) => ACTIVE_PARCEL_STATUS_SET.has(p.status));
   const historyParcels = parcels.filter((p) => !ACTIVE_PARCEL_STATUS_SET.has(p.status));
-  const activeDeals = deals.filter((d) => !["closed", "delivered"].includes(d.status));
-  const historyDeals = deals.filter((d) => ["closed", "delivered"].includes(d.status));
+  const activeDeals = deals.filter((d) => !["closed", "delivered", "cancelled", "expired"].includes(d.status));
+  const historyDeals = deals.filter((d) => ["closed", "delivered", "cancelled", "expired"].includes(d.status));
 
   return (
     <div className="px-4 safe-top">

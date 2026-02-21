@@ -13,6 +13,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { currentUserHasOpenDeal, syncMarketplaceExpirations } from "@/lib/marketplace";
 import { useToast } from "@/hooks/use-toast";
 
+function extractMissingSchemaColumn(errorMessage: string): string | null {
+  const match = /Could not find the '([^']+)' column of '[^']+' in the schema cache/i.exec(errorMessage);
+  return match?.[1] ?? null;
+}
+
 const SIZE_OPTIONS = [
   { value: "small", label: "Petit (< 2 kg)" },
   { value: "medium", label: "Moyen (2-5 kg)" },
@@ -21,11 +26,11 @@ const SIZE_OPTIONS = [
 ];
 
 const DELIVERY_POINT_TYPES = [
-  { value: "public_place", label: "Lieu public" },
-  { value: "delivery_office", label: "Bureau de livraison" },
+  { value: "public", label: "Lieu public" },
+  { value: "office", label: "Bureau" },
   { value: "airport", label: "Aéroport" },
-  { value: "train_station", label: "Gare ferroviaire" },
-  { value: "bus_station", label: "Gare routière" },
+  { value: "train", label: "Gare" },
+  { value: "other", label: "Autre" },
 ];
 
 export default function CreateParcel() {
@@ -44,6 +49,8 @@ export default function CreateParcel() {
   const [notes, setNotes] = useState("");
   const [deliveryPointAddress, setDeliveryPointAddress] = useState("");
   const [deliveryPointType, setDeliveryPointType] = useState("");
+  const [pickupRadiusKm, setPickupRadiusKm] = useState("");
+  const [pickupAreaText, setPickupAreaText] = useState("");
   const [forbiddenAck, setForbiddenAck] = useState(false);
 
   const normalizeSize = (value: string): "small" | "medium" | "large" => {
@@ -65,11 +72,26 @@ export default function CreateParcel() {
       });
       return;
     }
+    if (!pickupRadiusKm.trim() && !pickupAreaText.trim()) {
+      toast({
+        title: "Zone de pickup requise",
+        description: "Renseignez un rayon (km) ou une zone texte pour le pickup.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!forbiddenAck) {
       toast({ title: "Confirmation requise", description: "Veuillez confirmer que votre colis ne contient pas d'objets interdits.", variant: "destructive" });
       return;
     }
-    if (new Date(dateEnd) < new Date(dateStart)) {
+    const startDateLocal = new Date(`${dateStart}T00:00:00`);
+    const endDateLocal = new Date(`${dateEnd}T23:59:59`);
+    if (Number.isNaN(startDateLocal.getTime()) || Number.isNaN(endDateLocal.getTime())) {
+      toast({ title: "Dates invalides", description: "Veuillez choisir des dates valides.", variant: "destructive" });
+      return;
+    }
+
+    if (endDateLocal < startDateLocal) {
       toast({ title: "Dates invalides", description: "La date de fin doit être après la date de début.", variant: "destructive" });
       return;
     }
@@ -106,13 +128,13 @@ export default function CreateParcel() {
       return;
     }
 
-    const mergedNotes = `${contentDescription.trim()}\n${notes}`.trim();
-    const startIso = new Date(dateStart).toISOString();
-    const endIso = new Date(dateEnd).toISOString();
+    const startIso = startDateLocal.toISOString();
+    const endIso = endDateLocal.toISOString();
     const rewardAmount = reward ? parseInt(reward, 10) : 0;
     const normalizedSize = normalizeSize(sizeWeight);
+    const pickupRadius = pickupRadiusKm.trim() ? Number.parseFloat(pickupRadiusKm) : null;
 
-    const { error } = await supabase.from("parcel_requests").insert({
+    const basePayload: Record<string, unknown> = {
       sender_id: user.id,
       user_id: user.id,
       origin_wilaya: Number.parseInt(originWilaya.code, 10),
@@ -126,17 +148,59 @@ export default function CreateParcel() {
       size_weight: sizeWeight || null,
       reward_amount: rewardAmount,
       reward_dzd: rewardAmount,
-      notes: mergedNotes || null,
+      declared_content: contentDescription.trim(),
+      notes: notes.trim() || null,
+      dropoff_place_text: deliveryPointAddress.trim(),
+      dropoff_place_type: deliveryPointType,
       dropoff_place: deliveryPointAddress.trim(),
       delivery_point_address: deliveryPointAddress.trim(),
       delivery_point_type: deliveryPointType,
+      pickup_radius_km: Number.isFinite(pickupRadius) ? pickupRadius : null,
+      pickup_area_text: pickupAreaText.trim() || null,
       forbidden_ack: true,
       forbidden_items_acknowledged: true,
-    } as never);
+    };
+
+    const removableColumns = new Set([
+      "sender_id",
+      "time_window_start",
+      "time_window_end",
+      "size",
+      "reward_amount",
+      "dropoff_place",
+      "dropoff_place_text",
+      "dropoff_place_type",
+      "delivery_point_address",
+      "delivery_point_type",
+      "pickup_radius_km",
+      "pickup_area_text",
+      "declared_content",
+      "forbidden_ack",
+    ]);
+
+    const payload = { ...basePayload };
+    let errorMessage: string | null = null;
+
+    for (let attempt = 0; attempt < removableColumns.size + 1; attempt += 1) {
+      const { error } = await supabase.from("parcel_requests").insert(payload as never);
+      if (!error) {
+        errorMessage = null;
+        break;
+      }
+
+      const missingColumn = extractMissingSchemaColumn(error.message);
+      if (!missingColumn || !removableColumns.has(missingColumn) || !(missingColumn in payload)) {
+        errorMessage = error.message;
+        break;
+      }
+
+      delete payload[missingColumn];
+      errorMessage = error.message;
+    }
 
     setLoading(false);
-    if (error) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    if (errorMessage) {
+      toast({ title: "Erreur", description: errorMessage, variant: "destructive" });
     } else {
       toast({ title: "Demande publiée !" });
       navigate("/activity");
@@ -228,6 +292,28 @@ export default function CreateParcel() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Rayon pickup (km)</Label>
+          <Input
+            type="number"
+            min={0}
+            step="0.5"
+            placeholder="Ex: 3"
+            value={pickupRadiusKm}
+            onChange={(e) => setPickupRadiusKm(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Zone pickup (texte)</Label>
+          <Input
+            placeholder="Ex: centre-ville, campus, gare..."
+            value={pickupAreaText}
+            onChange={(e) => setPickupAreaText(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">Renseignez au moins un des deux: rayon ou zone texte.</p>
         </div>
 
 

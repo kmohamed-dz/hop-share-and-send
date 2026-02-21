@@ -1,5 +1,6 @@
 import { Home, Package, MessageCircle, User } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useAppLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -11,12 +12,24 @@ const NAV_ITEMS = [
 
 export function BottomNav() {
   const location = useLocation();
+  const { isRTL, language } = useAppLanguage();
+  const items = isRTL ? [...NAV_ITEMS].reverse() : NAV_ITEMS;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-primary/10 bg-card/95 backdrop-blur safe-bottom">
-      <div className="mx-auto flex max-w-md items-center justify-around h-16">
-        {NAV_ITEMS.map(({ to, icon: Icon, label }) => {
+      <div className="mx-auto flex max-w-6xl items-center justify-around h-16 px-2">
+        {items.map(({ to, icon: Icon, label }) => {
           const isActive = location.pathname === to;
+          const localizedLabel =
+            language === "ar"
+              ? label === "Accueil"
+                ? "الرئيسية"
+                : label === "Mes Colis"
+                  ? "طرودي"
+                  : label === "Messages"
+                    ? "الرسائل"
+                    : "الملف"
+              : label;
           return (
             <NavLink
               key={to}
@@ -27,7 +40,7 @@ export function BottomNav() {
               )}
             >
               <Icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 1.5} />
-              <span className={cn("font-medium", isActive && "font-semibold")}>{label}</span>
+              <span className={cn("font-medium", isActive && "font-semibold")}>{localizedLabel}</span>
             </NavLink>
           );
         })}

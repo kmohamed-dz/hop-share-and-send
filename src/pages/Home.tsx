@@ -5,7 +5,6 @@ import {
   MapPin,
   Clock,
   ArrowRight,
-  Bell,
   Zap,
   Car,
   Package,
@@ -14,6 +13,7 @@ import {
   User,
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Card } from "@/components/ui/card";
 import { useAppLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,13 +22,14 @@ import {
   ACTIVE_PARCEL_STATUSES,
   currentUserHasOpenDeal,
   syncMarketplaceExpirations,
+  TRIP_ACTIVE_STATUSES,
 } from "@/lib/marketplace";
 import { PARCEL_CATEGORIES } from "@/data/wilayas";
 import { toast } from "sonner";
 
 export default function Home() {
   const navigate = useNavigate();
-  const { t } = useAppLanguage();
+  const { t, language, isRTL } = useAppLanguage();
   const [trips, setTrips] = useState<Tables<"trips">[]>([]);
   const [parcels, setParcels] = useState<Tables<"parcel_requests">[]>([]);
 
@@ -41,7 +42,7 @@ export default function Home() {
         supabase
           .from("trips")
           .select("*")
-          .eq("status", "active")
+          .in("status", [...TRIP_ACTIVE_STATUSES])
           .gte("departure_date", nowIso)
           .order("created_at", { ascending: false })
           .limit(5),
@@ -79,9 +80,7 @@ export default function Home() {
           <h1 className="text-2xl font-extrabold text-primary">MAAK</h1>
         </div>
         <div className="flex items-center gap-3">
-          <button className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
-            <Bell className="h-5 w-5 text-primary" />
-          </button>
+          <NotificationBell />
           <button
             onClick={() => navigate("/profile")}
             className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden"
@@ -98,7 +97,7 @@ export default function Home() {
       >
         <Search className="h-5 w-5 text-muted-foreground" />
         <span className="text-muted-foreground text-sm">
-          Ou voulez-vous envoyer votre colis ?
+          {language === "ar" ? "إلى أين تريد إرسال طردك؟" : "Ou voulez-vous envoyer votre colis ?"}
         </span>
       </button>
 
@@ -123,7 +122,7 @@ export default function Home() {
             </div>
             <p className="font-bold text-sm">Publier un trajet</p>
             <p className="text-xs text-primary-foreground/80 mt-0.5">
-              Partagez vos frais
+              {language === "ar" ? "شارك تكاليفك" : "Partagez vos frais"}
             </p>
           </Card>
           <Card
@@ -140,7 +139,7 @@ export default function Home() {
             </div>
             <p className="font-bold text-sm text-foreground">Envoyer un colis</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Trouvez un transporteur
+              {language === "ar" ? "اعثر على ناقل" : "Trouvez un transporteur"}
             </p>
           </Card>
         </div>
@@ -169,7 +168,7 @@ export default function Home() {
               onClick={() => navigate("/processus")}
               className="text-xs font-semibold underline underline-offset-2 text-emerald-200"
             >
-              Comment ça marche ?
+              {language === "ar" ? "كيف يعمل؟" : "Comment ça marche ?"}
             </button>
           </div>
         </div>
@@ -186,14 +185,14 @@ export default function Home() {
             onClick={() => navigate("/browse/trips")}
             className="text-xs text-primary font-semibold flex items-center gap-0.5"
           >
-            Voir tout <ArrowRight className="h-3 w-3" />
+            {language === "ar" ? "عرض الكل" : "Voir tout"} <ArrowRight className={`h-3 w-3 ${isRTL ? "rotate-180" : ""}`} />
           </button>
         </div>
         {trips.length === 0 ? (
           <Card className="p-8">
-            <p className="text-sm text-muted-foreground text-center">
-              Aucun trajet disponible pour le moment
-            </p>
+              <p className="text-sm text-muted-foreground text-center">
+                {language === "ar" ? "لا توجد رحلات متاحة حالياً" : "Aucun trajet disponible pour le moment"}
+              </p>
           </Card>
         ) : (
           <div className="space-y-3">
@@ -283,14 +282,14 @@ export default function Home() {
             onClick={() => navigate("/browse/parcels")}
             className="text-xs text-primary font-semibold flex items-center gap-0.5"
           >
-            Voir tout <ArrowRight className="h-3 w-3" />
+            {language === "ar" ? "عرض الكل" : "Voir tout"} <ArrowRight className={`h-3 w-3 ${isRTL ? "rotate-180" : ""}`} />
           </button>
         </div>
         {parcels.length === 0 ? (
           <Card className="p-8">
-            <p className="text-sm text-muted-foreground text-center">
-              Aucune demande de colis
-            </p>
+              <p className="text-sm text-muted-foreground text-center">
+                {language === "ar" ? "لا توجد طلبات طرود" : "Aucune demande de colis"}
+              </p>
           </Card>
         ) : (
           <div className="space-y-2">

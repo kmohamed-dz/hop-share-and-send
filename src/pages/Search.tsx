@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { ACTIVE_PARCEL_STATUSES, syncMarketplaceExpirations } from "@/lib/marketplace";
+import { ACTIVE_PARCEL_STATUSES, syncMarketplaceExpirations, TRIP_ACTIVE_STATUSES } from "@/lib/marketplace";
 import { WILAYAS, PARCEL_CATEGORIES } from "@/data/wilayas";
 
 export default function SearchPage() {
@@ -68,7 +68,7 @@ export default function SearchPage() {
           const { data } = await supabase
             .from("trips")
             .select("*")
-            .eq("status", "active")
+            .in("status", [...TRIP_ACTIVE_STATUSES])
             .gte("departure_date", nowIso)
             .order("departure_date", { ascending: true })
             .limit(200);

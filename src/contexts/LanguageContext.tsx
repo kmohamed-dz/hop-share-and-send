@@ -37,7 +37,10 @@ function readStoredLanguage(): AppLanguage {
   if (modern) return normalizeLanguage(modern);
 
   const legacy = localStorage.getItem(LEGACY_LANGUAGE_STORAGE_KEY);
-  return normalizeLanguage(legacy);
+  if (legacy) return normalizeLanguage(legacy);
+
+  const browserLang = window.navigator.language?.toLowerCase() ?? "";
+  return browserLang.startsWith("ar") ? "ar" : "fr";
 }
 
 function extractProfileLanguage(data: Record<string, unknown> | null): AppLanguage | null {
@@ -108,6 +111,20 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     async (nextLanguage: AppLanguage) => {
       const normalized = normalizeLanguage(nextLanguage);
       setLocalLanguage(normalized);
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      await supabase
+        .from("profiles")
+        .update({
+          language_preference: normalized,
+          preferred_language: normalized,
+        } as never)
+        .eq("user_id", user.id);
     },
     [setLocalLanguage]
   );
